@@ -1,0 +1,41 @@
+name: Publish to NPM
+
+on:
+  push:
+    branches:
+      - main  # Runs on push to the main branch
+  release:
+    types: [published]  # Runs on GitHub release
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          registry-url: "https://registry.npmjs.org/"
+          scope: "@your-npm-username"  # Change this if using an NPM scope
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build package
+        run: npm run build
+
+      - name: Publish to NPM
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
