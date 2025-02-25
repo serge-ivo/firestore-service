@@ -30,10 +30,13 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools  # ✅ Install Firebase CLI
+
       - name: Run tests
         run: |
           export NODE_ENV=test
-          npm test
+          npx firebase emulators:exec --only firestore,auth --project firestore-service-test "jest --detectOpenHandles --runInBand"
         continue-on-error: false  # Stop if tests fail
 
       - name: Build package
