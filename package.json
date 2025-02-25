@@ -1,0 +1,32 @@
+{
+  "name": "firestore-service",
+  "version": "1.0.0",
+  "description": "A Firestore data management module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/serge-ivo/firestore-service.git"
+  },
+  "keywords": [
+    "firestore",
+    "firebase",
+    "database",
+    "sdk"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "firebase": "^10.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "@types/jest": "^29.0.0"
+  }
+}
