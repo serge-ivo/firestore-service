@@ -47,13 +47,12 @@ describe("🔥 FirestoreService - Full Tests", () => {
 
   beforeAll(async () => {
     console.log("🔥 Starting Firestore tests...");
-
-    const auth = getAuth();
-    connectAuthEmulator(auth, "http://localhost:9099");
+    FirestoreService.connectEmulators(9099, 9098);
+    console.log("🔥 Connected to Firestore & Auth Emulators");
 
     try {
       await createUserWithEmailAndPassword(
-        auth,
+        getAuth(),
         "testuser@example.com",
         "password123"
       );

@@ -79,14 +79,22 @@ export class FirestoreService {
         });
       }
     }
+  }
 
-    if (process.env.NODE_ENV === "test") {
-      connectFirestoreEmulator(FirestoreService.db, "localhost", 9098);
-      connectAuthEmulator(getAuth(), "http://localhost:9099", {
-        disableWarnings: true,
-      });
-      console.log("🔥 Connected to Firestore & Auth Emulators");
-    }
+  static connectEmulators(
+    authEmulatorPort: number,
+    firestoreEmulatorPort: number
+  ) {
+    connectAuthEmulator(getAuth(), `http://localhost:${authEmulatorPort}`, {
+      disableWarnings: true,
+    });
+
+    connectFirestoreEmulator(
+      FirestoreService.db,
+      "localhost",
+      firestoreEmulatorPort
+    );
+    console.log("🔥 Connected to Firestore & Auth Emulators");
   }
 
   static doc<T>(path: string): DocumentReference<T> {
