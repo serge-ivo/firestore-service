@@ -1,6 +1,7 @@
 // src/services/FirestoreService.ts
 import { FirebaseApp, initializeApp } from "firebase/app";
 import {
+  connectAuthEmulator,
   getAuth,
   GoogleAuthProvider,
   signInWithEmailAndPassword,
@@ -67,15 +68,24 @@ export class FirestoreService {
   static initialize(firebaseConfig: Record<string, any>) {
     if (!this.app) {
       this.app = initializeApp(firebaseConfig);
-      this.db = initializeFirestore(this.app, {
-        localCache: persistentLocalCache({
-          tabManager: persistentMultipleTabManager(),
-        }),
-      });
+
+      if (process.env.NODE_ENV === "test") {
+        this.db = initializeFirestore(this.app, {});
+      } else {
+        this.db = initializeFirestore(this.app, {
+          localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager(),
+          }),
+        });
+      }
     }
 
     if (process.env.NODE_ENV === "test") {
-      connectFirestoreEmulator(FirestoreService.db, "localhost", 8080);
+      connectFirestoreEmulator(FirestoreService.db, "localhost", 9098);
+      connectAuthEmulator(getAuth(), "http://localhost:9099", {
+        disableWarnings: true,
+      });
+      console.log("🔥 Connected to Firestore & Auth Emulators");
     }
   }
 

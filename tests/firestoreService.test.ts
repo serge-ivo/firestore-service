@@ -7,20 +7,21 @@ import {
   connectFirestoreEmulator,
 } from "firebase/firestore";
 import {
+  connectAuthEmulator,
+  createUserWithEmailAndPassword,
   getAuth,
   signInWithEmailAndPassword,
   signOut,
   UserCredential,
 } from "firebase/auth";
 
-// 🔥 Firebase Emulator Config
 const firebaseConfig = {
-  apiKey: "test-api-key",
-  authDomain: "test-auth-domain",
-  projectId: "test-project-id",
-  storageBucket: "test-storage-bucket",
-  messagingSenderId: "test-messaging-sender-id",
-  appId: "test-app-id",
+  apiKey: "fake-api-key", // ✅ Use a placeholder API key
+  authDomain: "localhost",
+  projectId: "firestore-service-test",
+  storageBucket: "test-bucket",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:fakeappid",
 };
 
 // Initialize FirestoreService for testing
@@ -44,8 +45,22 @@ const testData: TestData = {
 describe("🔥 FirestoreService - Full Tests", () => {
   let testDocId: string | undefined;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     console.log("🔥 Starting Firestore tests...");
+
+    const auth = getAuth();
+    connectAuthEmulator(auth, "http://localhost:9099");
+
+    try {
+      await createUserWithEmailAndPassword(
+        auth,
+        "testuser@example.com",
+        "password123"
+      );
+      console.log("✅ Test user created in Auth Emulator");
+    } catch (error) {
+      console.warn("⚠️ Test user already exists or cannot be created.");
+    }
   });
 
   afterAll(async () => {
@@ -111,5 +126,15 @@ describe("🔥 FirestoreService - Full Tests", () => {
     } catch (error) {
       console.warn("Auth test skipped: Firebase auth emulator not configured.");
     }
+  });
+
+  afterAll(async () => {
+    console.log("🛑 Stopping Firebase emulators...");
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const auth = getAuth();
+    await auth.signOut(); // ✅ Ensure Firebase Auth session is cleared
+
+    // process.exit(0); // ✅ Force Jest to exit cleanly
   });
 });

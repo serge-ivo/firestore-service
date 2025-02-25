@@ -1,0 +1,10 @@
+{
+  "emulators": {
+    "firestore": {
+      "port": 9098
+    },
+    "auth": {
+      "port": 9099
+    }
+  }
+}

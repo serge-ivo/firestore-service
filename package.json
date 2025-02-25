@@ -5,8 +5,9 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "test": "jest"
+    "start:emulators": "firebase emulators:start --only firestore,auth --project firestore-service-test",
+    "test": "firebase emulators:exec --only firestore,auth --project firestore-service-test 'jest --detectOpenHandles --runInBand'",
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
