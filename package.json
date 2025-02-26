@@ -19,7 +19,7 @@
     "database",
     "sdk"
   ],
-  "author": "Your Name",
+  "author": "Serge Ivo",
   "license": "MIT",
   "dependencies": {
     "firebase": "^10.0.0",
