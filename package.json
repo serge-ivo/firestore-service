@@ -1,5 +1,5 @@
 {
-  "name": "firestore-service",
+  "name": "firestore-client",
   "version": "1.0.0",
   "description": "A Firestore data management module",
   "main": "dist/index.js",
