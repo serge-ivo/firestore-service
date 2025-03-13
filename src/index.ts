@@ -1,2 +1,3 @@
-export { default as FirestoreService } from "./firestoreService";
+// src/index.ts
 export * from "./firestoreService";
+export * from "./firestoreModel";

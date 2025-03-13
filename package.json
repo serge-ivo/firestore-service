@@ -1,6 +1,6 @@
 {
   "name": "@serge-ivo/firestore-client",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "A Firestore data management module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,16 +15,6 @@
       "require": "./dist/index.js",
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
-    },
-    "./firestoreModel": {
-      "require": "./dist/firestoreModel.js",
-      "import": "./dist/firestoreModel.js",
-      "types": "./dist/firestoreModel.d.ts"
-    },
-    "./firestoreService": {
-      "require": "./dist/firestoreService.js",
-      "import": "./dist/firestoreService.js",
-      "types": "./dist/firestoreService.d.ts"
     }
   },
   "scripts": {
