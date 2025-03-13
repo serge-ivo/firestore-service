@@ -33,7 +33,6 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
 
 # Gatsby files
 .cache/
@@ -83,18 +82,12 @@ yarn-error.log*
 ehthumbs.db
 Thumbs.db
 
-# Build outputs
-/dist
-/build
-
-# Firebase cache
+# Build outputs (ignored for other projects, but NOT in firestore-service repo)
+build/
 .firebase/
 
-# Dependencies
-/node_modules/
+# Ignore dist/ everywhere EXCEPT the firestore-service repo
+/dist
+!/dist/ # This allows tracking dist/ in this repo
 
-# Version control Yarn lock file
-yarn.lock # This should be tracked by git, so don't ignore it
 
-# Ignore npm lock file as it's no longer needed
-package-lock.json # You can remove this line if it's there
