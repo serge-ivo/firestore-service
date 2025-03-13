@@ -87,7 +87,7 @@ build/
 .firebase/
 
 # Ignore dist/ everywhere EXCEPT the firestore-service repo
-/dist
+# /dist
 !dist/ # This allows tracking dist/ in this repo
 
 
