@@ -8,8 +8,16 @@
     "dist"
   ],
   "exports": {
-    "import": "./dist/index.js",
-    "types": "./dist/index.d.ts"
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./firestoreModel": {
+      "require": "./dist/firestoreModel.js",
+      "import": "./dist/firestoreModel.js",
+      "types": "./dist/firestoreModel.d.ts"
+    }
   },
   "scripts": {
     "start:emulators": "firebase emulators:start --only firestore,auth --project firestore-service-test",
