@@ -20,6 +20,11 @@
       "require": "./dist/firestoreModel.js",
       "import": "./dist/firestoreModel.js",
       "types": "./dist/firestoreModel.d.ts"
+    },
+    "./firestoreService": {
+      "require": "./dist/firestoreService.js",
+      "import": "./dist/firestoreService.js",
+      "types": "./dist/firestoreService.d.ts"
     }
   },
   "scripts": {
