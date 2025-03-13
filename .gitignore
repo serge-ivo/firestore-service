@@ -88,6 +88,6 @@ build/
 
 # Ignore dist/ everywhere EXCEPT the firestore-service repo
 /dist
-!/dist/ # This allows tracking dist/ in this repo
+!dist/ # This allows tracking dist/ in this repo
 
 
