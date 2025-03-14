@@ -40,7 +40,7 @@ import FirestoreDataConverter from "./FirestoreDataConverter";
 import { FirestoreModel } from "./firestoreModel";
 import RequestLimiter from "./RequestLimiter";
 
-type FilterOperator =
+export type FilterOperator =
   | "=="
   | "!="
   | "<"
