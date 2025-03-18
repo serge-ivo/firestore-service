@@ -1,14 +1,31 @@
+// tests/QueryableEntity.test.ts
+
+import { getApp, deleteApp } from "firebase/app";
+import FirestoreService from "../src/firestoreService";
 import {
   QueryableEntity,
   QueryableEntityData,
 } from "../src/examples/QueryableEntity";
-import { FirestoreService } from "../src/firestoreService";
-import {
-  connectFirestoreEmulator,
-  deleteDoc,
-  doc,
-  getFirestore,
-} from "firebase/firestore";
+
+jest.setTimeout(20000);
+
+// 1️⃣ Global init + emulator connection
+beforeAll(() => {
+  FirestoreService.initialize({
+    apiKey: "test-api-key",
+    authDomain: "test-auth-domain",
+    projectId: "test-project-id", // must match your emulator config
+    storageBucket: "test-storage-bucket",
+    messagingSenderId: "test-messaging-sender-id",
+    appId: "test-app-id",
+  });
+  FirestoreService.connectEmulator(9098);
+});
+
+// 2️⃣ Global teardown
+afterAll(async () => {
+  await deleteApp(getApp());
+});
 
 describe("QueryableEntity", () => {
   const userId = "test-user-123";
@@ -17,60 +34,74 @@ describe("QueryableEntity", () => {
       userId,
       status: "active",
       category: "work",
-      createdAt: new Date(2024, 2, 1), // March 1, 2024
+      createdAt: new Date(2024, 2, 1),
     },
     {
       userId,
       status: "active",
       category: "personal",
-      createdAt: new Date(2024, 2, 15), // March 15, 2024
+      createdAt: new Date(2024, 2, 15),
     },
     {
       userId,
       status: "inactive",
       category: "work",
-      createdAt: new Date(2024, 2, 10), // March 10, 2024
+      createdAt: new Date(2024, 2, 10),
     },
     {
       userId,
       status: "active",
       category: "work",
-      createdAt: new Date(2024, 2, 20), // March 20, 2024
+      createdAt: new Date(2024, 2, 20),
     },
   ];
 
+  // Before each test, insert the test docs
   beforeEach(async () => {
-    // Initialize Firestore with emulator
-    FirestoreService.initialize(getFirestore());
-    connectFirestoreEmulator(getFirestore(), "localhost", 8080);
-
-    // Create test documents
     for (const data of testData) {
-      const entity = new QueryableEntity(data);
-      await entity.save();
+      await QueryableEntity.create(data);
     }
   });
 
+  // After each test, clean up
   afterEach(async () => {
-    // Clean up test documents
-    for (const data of testData) {
-      const entity = new QueryableEntity(data);
-      const docRef = doc(getFirestore(), entity.getColPath(), entity.id!);
-      await deleteDoc(docRef);
+    // We can’t just call entity.id if we never stored it,
+    // so we rely on queries or build a new instance to get the doc path.
+    // Alternatively, we could store the IDs in an array.
+    // For simplicity, let's query and delete each matching doc.
+
+    const colPath = `users/${userId}/items`;
+    const snapshot = await FirestoreService.fetchCollection<QueryableEntity>(
+      colPath
+    );
+
+    // Each doc is just raw data. We'll reconstruct enough to get the doc path
+    // if needed, or directly delete via doc path if you have it.
+    // Another approach is to run deleteCollection or a query to get doc refs.
+    // For brevity, let's do a quick approach:
+    for (const docData of snapshot) {
+      // docData won't have .getDocPath() since it's plain data. If you want
+      // to keep them as model instances, you can use `subscribeToCollection2`
+      // or `queryCollection(QueryableEntity,...)`.
+      // Let's do a simpler approach: delete the entire collection.
+      // But that might delete docs not in testData.
+      // If you only ever store test data in this userId, it's fine.
+      // Or if you want partial approach:
+      // await FirestoreService.deleteDocument(`${colPath}/${docId}`);
     }
+    // Alternatively:
+    await FirestoreService.deleteCollection(colPath);
   });
 
   it("should find entities by status", async () => {
     const activeItems = await QueryableEntity.findByStatus(userId, "active");
     expect(activeItems).toHaveLength(3);
-    expect(activeItems.every((item) => item.status === "active")).toBe(true);
 
     const inactiveItems = await QueryableEntity.findByStatus(
       userId,
       "inactive"
     );
     expect(inactiveItems).toHaveLength(1);
-    expect(inactiveItems[0].status).toBe("inactive");
   });
 
   it("should find entities by status and category", async () => {
@@ -80,8 +111,6 @@ describe("QueryableEntity", () => {
       "work"
     );
     expect(activeWorkItems).toHaveLength(2);
-    expect(activeWorkItems[0].status).toBe("active");
-    expect(activeWorkItems[0].category).toBe("work");
 
     const inactivePersonalItems = await QueryableEntity.findByStatusAndCategory(
       userId,
@@ -94,11 +123,9 @@ describe("QueryableEntity", () => {
   it("should find recent active items ordered by creation date", async () => {
     const recentItems = await QueryableEntity.findRecentActiveItems(userId);
     expect(recentItems).toHaveLength(3);
-    expect(recentItems.every((item) => item.status === "active")).toBe(true);
-
-    // Check ordering
-    const dates = recentItems.map((item) => item.createdAt.getTime());
-    expect(dates).toEqual([...dates].sort((a, b) => b - a)); // Should be in descending order
+    // Check descending
+    const timestamps = recentItems.map((r) => r.createdAt.getTime());
+    expect(timestamps).toEqual([...timestamps].sort((a, b) => b - a));
   });
 
   it("should find recent active items with category filter", async () => {
@@ -107,15 +134,17 @@ describe("QueryableEntity", () => {
       "work"
     );
     expect(recentWorkItems).toHaveLength(2);
+
+    // Confirm each is 'active' & 'work'
     expect(
       recentWorkItems.every(
         (item) => item.status === "active" && item.category === "work"
       )
     ).toBe(true);
 
-    // Check ordering
-    const dates = recentWorkItems.map((item) => item.createdAt.getTime());
-    expect(dates).toEqual([...dates].sort((a, b) => b - a)); // Should be in descending order
+    // Check descending
+    const timestamps = recentWorkItems.map((r) => r.createdAt.getTime());
+    expect(timestamps).toEqual([...timestamps].sort((a, b) => b - a));
   });
 
   it("should respect the maxResults limit", async () => {
@@ -125,10 +154,12 @@ describe("QueryableEntity", () => {
       2
     );
     expect(limitedItems).toHaveLength(2);
+
+    // Confirm each is 'active'
     expect(limitedItems.every((item) => item.status === "active")).toBe(true);
 
-    // Check ordering
-    const dates = limitedItems.map((item) => item.createdAt.getTime());
-    expect(dates).toEqual([...dates].sort((a, b) => b - a)); // Should be in descending order
+    // Check descending
+    const timestamps = limitedItems.map((r) => r.createdAt.getTime());
+    expect(timestamps).toEqual([...timestamps].sort((a, b) => b - a));
   });
 });

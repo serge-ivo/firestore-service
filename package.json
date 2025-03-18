@@ -4,9 +4,7 @@
   "description": "A Firestore data management module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "publishConfig": {
     "access": "public"
   },
@@ -19,7 +17,7 @@
   },
   "scripts": {
     "start:emulators": "firebase emulators:start --only firestore,auth --project firestore-service-test",
-    "test": "firebase emulators:exec --only firestore,auth --project firestore-service-test 'jest --detectOpenHandles --runInBand'",
+    "test": "jest --detectOpenHandles --runInBand",
     "build": "tsc"
   },
   "repository": {

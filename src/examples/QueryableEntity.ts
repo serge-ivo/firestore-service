@@ -1,3 +1,5 @@
+// src/models/QueryableEntity.ts
+
 import { FirestoreModel } from "../firestoreModel";
 import { FirestoreService } from "../firestoreService";
 import type { FilterOperator } from "../firestoreService";
@@ -9,6 +11,10 @@ export interface QueryableEntityData {
   createdAt: Date;
 }
 
+/**
+ * ✅ Demonstrates a Firestore entity that can be queried
+ * without a custom save() — we rely on the base create() and update().
+ */
 export class QueryableEntity extends FirestoreModel {
   userId: string;
   status: "active" | "inactive";
@@ -23,26 +29,28 @@ export class QueryableEntity extends FirestoreModel {
     this.createdAt = data.createdAt;
   }
 
+  /**
+   * Required by FirestoreModel:
+   * - Document path for this instance (e.g. "users/userId/items/itemId").
+   */
   getDocPath(): string {
-    if (!this.id) throw new Error("Document ID not set");
+    if (!this.id) {
+      throw new Error("Document ID not set. Cannot build doc path.");
+    }
     return `users/${this.userId}/items/${this.id}`;
   }
 
+  /**
+   * Required by FirestoreModel:
+   * - Collection path (e.g. "users/userId/items").
+   */
   getColPath(): string {
     return `users/${this.userId}/items`;
   }
 
-  async save(): Promise<void> {
-    if (this.id) {
-      await FirestoreService.updateDocument(this.getDocPath(), this);
-    } else {
-      const newId = await FirestoreService.addDocument(this.getColPath(), this);
-      if (newId) {
-        this._setId(newId);
-      }
-    }
-  }
-
+  /**
+   * ✅ Finds items by status in this user’s collection.
+   */
   static async findByStatus(
     userId: string,
     status: "active" | "inactive"
@@ -57,6 +65,9 @@ export class QueryableEntity extends FirestoreModel {
     );
   }
 
+  /**
+   * ✅ Finds items by both status and category.
+   */
   static async findByStatusAndCategory(
     userId: string,
     status: "active" | "inactive",
@@ -75,12 +86,17 @@ export class QueryableEntity extends FirestoreModel {
     );
   }
 
+  /**
+   * ✅ Finds recent 'active' items, optionally filtered by category,
+   *    ordered by createdAt descending.
+   */
   static async findRecentActiveItems(
     userId: string,
     category?: string,
     maxResults: number = 10
   ): Promise<QueryableEntity[]> {
     const path = `users/${userId}/items`;
+
     const queryOptions = {
       where: [
         { field: "status", op: "==" as FilterOperator, value: "active" },
