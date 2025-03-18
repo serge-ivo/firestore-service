@@ -185,6 +185,77 @@ const unsubscribe = AuthService.onAuthStateChanged((user) => {
 await AuthService.signOut();
 ```
 
+### Advanced Features
+
+#### Batch Operations
+
+```typescript
+// Start a batch
+const batch = FirestoreService.getBatch();
+
+// Add operations to the batch
+FirestoreService.updateInBatch(batch, "users/123", {
+  title: "Updated Title",
+  updatedAt: new Date(),
+});
+
+FirestoreService.setInBatch(batch, "users/456", newData, { merge: true });
+FirestoreService.deleteInBatch(batch, "users/789");
+
+// Commit the batch
+await batch.commit();
+```
+
+#### Field Value Operations
+
+```typescript
+// Array operations
+const { arrayUnion, arrayRemove } = FirestoreService.getFieldValue();
+
+// Add tags to an array
+await FirestoreService.updateDocument("users/123", {
+  tags: arrayUnion("firebase", "tutorial"),
+});
+
+// Remove tags from an array
+await FirestoreService.updateDocument("users/123", {
+  tags: arrayRemove("firebase"),
+});
+
+// Delete a field
+await FirestoreService.updateDocument("users/123", {
+  description: FirestoreService.deleteField(),
+});
+```
+
+#### Real-time Updates
+
+```typescript
+// Subscribe to a single document
+const unsubscribeDoc = FirestoreService.subscribeToDocument<UserType>(
+  "users/123",
+  (updatedData) => {
+    if (updatedData) {
+      console.log("Document changed:", updatedData);
+    } else {
+      console.log("Document was deleted");
+    }
+  }
+);
+
+// Subscribe to a collection
+const unsubscribeCollection = FirestoreService.subscribeToCollection<UserType>(
+  "users",
+  (allDocs) => {
+    console.log("Collection changed. Current docs:", allDocs);
+  }
+);
+
+// Don't forget to unsubscribe when done
+unsubscribeDoc();
+unsubscribeCollection();
+```
+
 ### Best Practices
 
 1. **Use Type Safety**
@@ -217,11 +288,30 @@ await AuthService.signOut();
    if (process.env.NODE_ENV === "development") {
      // Connect to Firestore emulator
      FirestoreService.connectEmulator(9098);
-
-     // Connect to Auth emulator
-     AuthService.connectEmulator(9099);
    }
    ```
+
+## Testing
+
+This library uses Jest for testing. Tests are run against the Firebase Emulator Suite.
+
+1. Start the Firebase emulators:
+
+   ```bash
+   npm run start:emulators
+   ```
+
+2. In a separate terminal, run the tests:
+   ```bash
+   npm test
+   ```
+
+The tests will verify core functionality including:
+
+- Document operations (create, read, update, delete)
+- Collection queries
+- Batch operations
+- Rate limiting and usage controls
 
 4. **Clean Up Subscriptions**
 

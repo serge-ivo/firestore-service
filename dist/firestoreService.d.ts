@@ -1,7 +1,6 @@
-import { User } from "firebase/auth";
-import { arrayRemove, arrayUnion, CollectionReference, DocumentReference, QueryConstraint, Timestamp } from "firebase/firestore";
+import { arrayRemove, arrayUnion, QueryConstraint, SetOptions, Timestamp, WriteBatch, FieldValue } from "firebase/firestore";
 import { FirestoreModel } from "./firestoreModel";
-type FilterOperator = "==" | "!=" | "<" | "<=" | ">" | ">=" | "array-contains" | "in" | "array-contains-any" | "not-in";
+export type FilterOperator = "==" | "!=" | "<" | "<=" | ">" | ">=" | "array-contains" | "in" | "array-contains-any" | "not-in";
 interface QueryOptions {
     where?: Array<{
         field: string;
@@ -18,9 +17,9 @@ export declare class FirestoreService {
     private static app;
     private static db;
     static initialize(firebaseConfig: Record<string, any>): void;
-    static connectEmulators(authEmulatorPort: number, firestoreEmulatorPort: number): void;
-    static doc<T>(path: string): DocumentReference<T>;
-    static collection<T>(path: string): CollectionReference<T>;
+    static connectEmulator(firestoreEmulatorPort: number): void;
+    private static doc;
+    private static collection;
     static getDocument<T>(docPath: string): Promise<T | null>;
     static addDocument<T>(collectionPath: string, data: T): Promise<string | undefined>;
     static updateDocument(docPath: string, data: Record<string, any>): Promise<void>;
@@ -86,13 +85,26 @@ export declare class FirestoreService {
         arrayRemove: typeof arrayRemove;
     };
     static getTimestamp(): Timestamp;
-    static deleteField(): import("@firebase/firestore").FieldValue;
-    static getBatch(): import("@firebase/firestore").WriteBatch;
-    static getAuthUserId(): string | null;
-    static signInWithGoogle(): Promise<User | null>;
-    static signInWithEmailPassword(email: string, password: string): Promise<User | null>;
-    static onAuthStateChanged(callback: (user: User | null) => void): () => void;
-    static signOut(): Promise<void>;
+    static deleteField(): FieldValue;
+    /**
+     * Returns a new Firestore WriteBatch.
+     */
+    static getBatch(): WriteBatch;
+    /**
+     * Helper for batch.update()
+     */
+    static updateInBatch(batch: WriteBatch, docPath: string, data: {
+        [key: string]: FieldValue | Partial<unknown> | undefined;
+    }): void;
+    /**
+     * Helper for batch.set()
+     * Overload with optional merge
+     */
+    static setInBatch<T>(batch: WriteBatch, docPath: string, data: T, options?: SetOptions): void;
+    /**
+     * Helper for batch.delete()
+     */
+    static deleteInBatch(batch: WriteBatch, docPath: string): void;
     static add(collectionPath: string, data: any): Promise<string | undefined>;
 }
 export default FirestoreService;

@@ -1,4 +1,5 @@
 "use strict";
+// src/models/ExampleEntity.ts
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -15,63 +16,48 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExampleEntity = void 0;
 const firestoreModel_1 = require("../firestoreModel");
 const firestoreService_1 = __importDefault(require("../firestoreService"));
+/**
+ * ✅ ExampleEntity extends FirestoreModel, gaining 'update', 'delete', etc.
+ */
 class ExampleEntity extends firestoreModel_1.FirestoreModel {
-    constructor(data, id) {
-        super(id !== null && id !== void 0 ? id : ""); // Ensure Firestore ID is handled properly
-        this.title = data.title;
-        this.description = data.description;
-        this.createdAt = data.createdAt;
-        this.updatedAt = data.updatedAt;
-        this.owner = data.owner;
+    constructor(data = {}, id) {
+        var _a, _b, _c, _d, _e;
+        super(id);
+        // Initialize fields safely (handle partial data)
+        this.title = (_a = data.title) !== null && _a !== void 0 ? _a : "";
+        this.description = (_b = data.description) !== null && _b !== void 0 ? _b : "";
+        this.createdAt = (_c = data.createdAt) !== null && _c !== void 0 ? _c : new Date();
+        this.updatedAt = (_d = data.updatedAt) !== null && _d !== void 0 ? _d : new Date();
+        this.owner = (_e = data.owner) !== null && _e !== void 0 ? _e : "";
     }
     /**
-     * ✅ Constructs Firestore collection/document paths.
+     * ✅ Build Firestore path. If 'id' is provided, returns document path; else collection path.
      */
-    static buildPath(entityId) {
-        return entityId ? `examples/${entityId}` : `examples`;
+    static buildPath(id) {
+        return id ? `examples/${id}` : `examples`;
     }
+    /**
+     * ✅ For FirestoreModel's abstract method: document path for this instance.
+     */
     getDocPath() {
-        if (!this.id)
-            throw new Error("Cannot get document path before saving to Firestore");
+        if (!this.id) {
+            throw new Error("Cannot get document path: entity has no Firestore ID yet.");
+        }
         return ExampleEntity.buildPath(this.id);
     }
+    /**
+     * ✅ For FirestoreModel's abstract method: collection path for this model.
+     */
     getColPath() {
         return ExampleEntity.buildPath();
     }
     /**
-     * ✅ Fetches an ExampleEntity by ID from Firestore.
+     * ✅ Retrieve an ExampleEntity by ID directly (alternative to FirestoreModel.get()).
      */
     static getById(id) {
         return __awaiter(this, void 0, void 0, function* () {
             const docData = yield firestoreService_1.default.getDocument(ExampleEntity.buildPath(id));
             return docData ? new ExampleEntity(docData, id) : null;
-        });
-    }
-    /**
-     * ✅ Saves or updates this entity in Firestore.
-     */
-    save() {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!this.id) {
-                const newId = yield firestoreService_1.default.addDocument(this.getColPath(), {
-                    title: this.title,
-                    description: this.description,
-                    createdAt: this.createdAt,
-                    updatedAt: this.updatedAt,
-                    owner: this.owner,
-                });
-                if (!newId)
-                    throw new Error("Failed to save ExampleEntity");
-                this._setId(newId);
-            }
-            else {
-                yield firestoreService_1.default.updateDocument(this.getDocPath(), {
-                    title: this.title,
-                    description: this.description,
-                    updatedAt: new Date(),
-                });
-            }
-            return this;
         });
     }
 }

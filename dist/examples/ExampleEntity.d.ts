@@ -1,6 +1,6 @@
 import { FirestoreModel } from "../firestoreModel";
 /**
- * ✅ Represents a Firestore document entity.
+ * ✅ Represents the shape of the Firestore document data.
  */
 export type ExampleData = {
     title: string;
@@ -9,25 +9,30 @@ export type ExampleData = {
     updatedAt: Date;
     owner: string;
 };
+/**
+ * ✅ ExampleEntity extends FirestoreModel, gaining 'update', 'delete', etc.
+ */
 export declare class ExampleEntity extends FirestoreModel {
     title: string;
     description: string;
     createdAt: Date;
     updatedAt: Date;
     owner: string;
-    constructor(data: ExampleData, id?: string);
+    constructor(data?: Partial<ExampleData>, id?: string);
     /**
-     * ✅ Constructs Firestore collection/document paths.
+     * ✅ Build Firestore path. If 'id' is provided, returns document path; else collection path.
      */
-    static buildPath(entityId?: string): string;
+    static buildPath(id?: string): string;
+    /**
+     * ✅ For FirestoreModel's abstract method: document path for this instance.
+     */
     getDocPath(): string;
+    /**
+     * ✅ For FirestoreModel's abstract method: collection path for this model.
+     */
     getColPath(): string;
     /**
-     * ✅ Fetches an ExampleEntity by ID from Firestore.
+     * ✅ Retrieve an ExampleEntity by ID directly (alternative to FirestoreModel.get()).
      */
     static getById(id: string): Promise<ExampleEntity | null>;
-    /**
-     * ✅ Saves or updates this entity in Firestore.
-     */
-    save(): Promise<ExampleEntity>;
 }

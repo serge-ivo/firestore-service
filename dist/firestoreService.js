@@ -15,7 +15,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.FirestoreService = void 0;
 // src/services/FirestoreService.ts
 const app_1 = require("firebase/app");
-const auth_1 = require("firebase/auth");
 const firestore_1 = require("firebase/firestore");
 const FirestoreDataConverter_1 = __importDefault(require("./FirestoreDataConverter"));
 const RequestLimiter_1 = __importDefault(require("./RequestLimiter"));
@@ -37,12 +36,9 @@ class FirestoreService {
             }
         }
     }
-    static connectEmulators(authEmulatorPort, firestoreEmulatorPort) {
-        (0, auth_1.connectAuthEmulator)((0, auth_1.getAuth)(), `http://localhost:${authEmulatorPort}`, {
-            disableWarnings: true,
-        });
+    static connectEmulator(firestoreEmulatorPort) {
         (0, firestore_2.connectFirestoreEmulator)(FirestoreService.db, "localhost", firestoreEmulatorPort);
-        console.log("🔥 Connected to Firestore & Auth Emulators");
+        console.log("🔥 Connected to Firestore Emulator");
     }
     static doc(path) {
         return (0, firestore_1.doc)(this.db, path).withConverter((0, FirestoreDataConverter_1.default)());
@@ -210,49 +206,34 @@ class FirestoreService {
     static deleteField() {
         return (0, firestore_1.deleteField)();
     }
+    /**
+     * Returns a new Firestore WriteBatch.
+     */
     static getBatch() {
         RequestLimiter_1.default.logGeneralRequest();
         return (0, firestore_1.writeBatch)(this.db);
     }
-    static getAuthUserId() {
-        const auth = (0, auth_1.getAuth)();
-        const user = auth.currentUser;
-        return user ? user.uid : null;
+    /**
+     * Helper for batch.update()
+     */
+    static updateInBatch(batch, docPath, data) {
+        const docRef = (0, firestore_1.doc)(this.db, docPath);
+        batch.update(docRef, data);
     }
-    // Method to sign in with Google
-    static signInWithGoogle() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const auth = (0, auth_1.getAuth)();
-            const provider = new auth_1.GoogleAuthProvider();
-            try {
-                const result = yield (0, auth_1.signInWithPopup)(auth, provider);
-                return result.user;
-            }
-            catch (error) {
-                console.error("Error during Google sign-in:", error);
-                return null;
-            }
-        });
+    /**
+     * Helper for batch.set()
+     * Overload with optional merge
+     */
+    static setInBatch(batch, docPath, data, options = {}) {
+        const docRef = (0, firestore_1.doc)(this.db, docPath).withConverter((0, FirestoreDataConverter_1.default)());
+        batch.set(docRef, data, options);
     }
-    // Method to sign in with Email and Password
-    static signInWithEmailPassword(email, password) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const auth = (0, auth_1.getAuth)();
-            try {
-                const result = yield (0, auth_1.signInWithEmailAndPassword)(auth, email, password);
-                return result.user;
-            }
-            catch (error) {
-                console.error("Error during email/password sign-in:", error);
-                return null;
-            }
-        });
-    }
-    static onAuthStateChanged(callback) {
-        return (0, auth_1.getAuth)().onAuthStateChanged(callback);
-    }
-    static signOut() {
-        return (0, auth_1.getAuth)().signOut();
+    /**
+     * Helper for batch.delete()
+     */
+    static deleteInBatch(batch, docPath) {
+        const docRef = (0, firestore_1.doc)(this.db, docPath);
+        batch.delete(docRef);
     }
     static add(collectionPath, data) {
         return (0, firestore_1.addDoc)(this.collection(collectionPath), data).then((docRef) => docRef.id);
