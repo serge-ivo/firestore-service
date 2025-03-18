@@ -1,5 +1,6 @@
 // BatchUsageExample.ts
 
+import { initializeApp } from "firebase/app";
 import FirestoreService from "../firestoreService";
 import { ExampleEntity } from "../examples/ExampleEntity";
 
@@ -9,11 +10,14 @@ import { ExampleEntity } from "../examples/ExampleEntity";
  * to perform multiple writes in a single atomic batch.
  */
 async function demoBatchWrites() {
-  // 1️⃣ Initialize Firestore if not already
-  FirestoreService.initialize({
+  // 1️⃣ Initialize Firebase app and Firestore
+  const app = initializeApp({
     apiKey: "fake-api-key",
     projectId: "your-app",
   });
+
+  // Initialize Firestore with the Firebase app
+  FirestoreService.initialize(app);
 
   // 2️⃣ Create two new ExampleEntity documents
   const entityA = await ExampleEntity.create({

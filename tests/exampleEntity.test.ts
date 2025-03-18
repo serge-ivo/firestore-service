@@ -5,7 +5,7 @@
  * via ExampleEntity and FirestoreService, connected to the Firestore emulator.
  */
 
-import { getApp, deleteApp } from "firebase/app"; // for clean teardown
+import { getApp, deleteApp, initializeApp } from "firebase/app"; // for clean teardown
 import FirestoreService from "../src/firestoreService";
 import { ExampleEntity, ExampleData } from "../src/examples/ExampleEntity";
 
@@ -14,8 +14,8 @@ jest.setTimeout(20000);
 
 // 1️⃣ Initialize Firestore and connect emulator once for all tests
 beforeAll(() => {
-  // Provide test config. The `projectId` here should match the emulator settings.
-  FirestoreService.initialize({
+  // Initialize Firebase app with test config. The `projectId` here should match the emulator settings.
+  const app = initializeApp({
     apiKey: "test-api-key",
     authDomain: "test-auth-domain",
     projectId: "test-project-id", // Must match your emulator project
@@ -23,6 +23,10 @@ beforeAll(() => {
     messagingSenderId: "test-messaging-sender-id",
     appId: "test-app-id",
   });
+
+  // Initialize Firestore with the Firebase app
+  FirestoreService.initialize(app);
+
   // Connect to local emulator on the port you use (default 8080 for Firestore)
   FirestoreService.connectEmulator(9098);
 });

@@ -13,27 +13,26 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FirestoreService = void 0;
-// src/services/FirestoreService.ts
-const app_1 = require("firebase/app");
 const firestore_1 = require("firebase/firestore");
 const FirestoreDataConverter_1 = __importDefault(require("./FirestoreDataConverter"));
 const RequestLimiter_1 = __importDefault(require("./RequestLimiter"));
 const firestore_2 = require("firebase/firestore");
 class FirestoreService {
-    // Initialize Firebase app and Firestore
-    static initialize(firebaseConfig) {
-        if (!this.app) {
-            this.app = (0, app_1.initializeApp)(firebaseConfig);
-            if (process.env.NODE_ENV === "test") {
-                this.db = (0, firestore_1.initializeFirestore)(this.app, {});
-            }
-            else {
-                this.db = (0, firestore_1.initializeFirestore)(this.app, {
-                    localCache: (0, firestore_1.persistentLocalCache)({
-                        tabManager: (0, firestore_1.persistentMultipleTabManager)(),
-                    }),
-                });
-            }
+    /**
+     * Initialize Firestore using an existing Firebase app instance.
+     * Note: You must initialize Firebase app yourself before calling this method.
+     * @param app - An initialized Firebase app instance
+     */
+    static initialize(app) {
+        if (process.env.NODE_ENV === "test") {
+            this.db = (0, firestore_1.initializeFirestore)(app, {});
+        }
+        else {
+            this.db = (0, firestore_1.initializeFirestore)(app, {
+                localCache: (0, firestore_1.persistentLocalCache)({
+                    tabManager: (0, firestore_1.persistentMultipleTabManager)(),
+                }),
+            });
         }
     }
     static connectEmulator(firestoreEmulatorPort) {

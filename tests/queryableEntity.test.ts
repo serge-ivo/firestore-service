@@ -1,6 +1,6 @@
 // tests/QueryableEntity.test.ts
 
-import { getApp, deleteApp } from "firebase/app";
+import { getApp, deleteApp, initializeApp } from "firebase/app";
 import FirestoreService from "../src/firestoreService";
 import {
   QueryableEntity,
@@ -11,7 +11,7 @@ jest.setTimeout(20000);
 
 // 1️⃣ Global init + emulator connection
 beforeAll(() => {
-  FirestoreService.initialize({
+  const app = initializeApp({
     apiKey: "test-api-key",
     authDomain: "test-auth-domain",
     projectId: "test-project-id", // must match your emulator config
@@ -19,6 +19,9 @@ beforeAll(() => {
     messagingSenderId: "test-messaging-sender-id",
     appId: "test-app-id",
   });
+
+  // Initialize Firestore with the Firebase app
+  FirestoreService.initialize(app);
   FirestoreService.connectEmulator(9098);
 });
 

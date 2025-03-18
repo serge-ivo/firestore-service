@@ -18,8 +18,9 @@
     }
   },
   "scripts": {
-    "start:emulators": "firebase emulators:start --only firestore,auth --project firestore-service-test",
+    "start:emulators": "firebase emulators:start --only firestore --project firestore-service-test",
     "test": "jest --detectOpenHandles --runInBand",
+    "test:emulator": "npm run start:emulators & sleep 5 && npm test",
     "build": "tsc"
   },
   "repository": {

@@ -1,6 +1,6 @@
 // tests/FirestoreServiceFull.test.ts
 
-import { getApp, deleteApp } from "firebase/app";
+import { getApp, deleteApp, initializeApp } from "firebase/app";
 import { getFirestore, deleteDoc, doc } from "firebase/firestore";
 
 import FirestoreService from "../src/firestoreService";
@@ -29,7 +29,8 @@ describe("🔥 FirestoreService - Full Tests", () => {
 
   // 1️⃣ Single initialization + emulator connect
   beforeAll(async () => {
-    FirestoreService.initialize(firebaseConfig);
+    const app = initializeApp(firebaseConfig);
+    FirestoreService.initialize(app);
     FirestoreService.connectEmulator(9098);
     db = getFirestore(); // get updated Firestore instance if needed
     console.log("🔥 Starting Firestore & Auth tests against emulator...");

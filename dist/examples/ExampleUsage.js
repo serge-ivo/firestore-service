@@ -13,20 +13,23 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const app_1 = require("firebase/app");
 const firestoreService_1 = __importDefault(require("../firestoreService"));
 const ExampleEntity_1 = require("./ExampleEntity");
 (function runDemo() {
     return __awaiter(this, void 0, void 0, function* () {
-        // 1️⃣ Initialize Firestore (only once in your app's lifecycle)
-        firestoreService_1.default.initialize({
+        // 1️⃣ Initialize Firebase app (only once in your app's lifecycle)
+        const app = (0, app_1.initializeApp)({
             apiKey: "fake-api-key", // Replace with real config in production
             authDomain: "your-app.firebaseapp.com",
             projectId: "your-app",
             // etc.
         });
-        // 2️⃣ (Optional) Connect to Firestore emulator for local dev
+        // 2️⃣ Initialize Firestore using the Firebase app
+        firestoreService_1.default.initialize(app);
+        // 3️⃣ (Optional) Connect to Firestore emulator for local dev
         // FirestoreService.connectEmulator(8080);
-        // 3️⃣ Create a new ExampleEntity
+        // 4️⃣ Create a new ExampleEntity
         const newEntity = yield ExampleEntity_1.ExampleEntity.create({
             title: "Hello World",
             description: "A brand new entity",
@@ -36,14 +39,14 @@ const ExampleEntity_1 = require("./ExampleEntity");
         });
         console.log("Created entity:", newEntity);
         console.log("Assigned Firestore ID:", newEntity.id);
-        // 4️⃣ Fetch it by ID (two approaches)
+        // 5️⃣ Fetch it by ID (two approaches)
         const fetchedEntity = yield ExampleEntity_1.ExampleEntity.getById(newEntity.id);
         console.log("Fetched with getById:", fetchedEntity);
         // or using the static `get` from FirestoreModel (if you prefer doc paths)
         const docPath = ExampleEntity_1.ExampleEntity.buildPath(newEntity.id);
         const fetchedViaModel = yield ExampleEntity_1.ExampleEntity.get(docPath);
         console.log("Fetched via FirestoreModel static get:", fetchedViaModel);
-        // 5️⃣ Update the entity (notice it already has an ID)
+        // 6️⃣ Update the entity (notice it already has an ID)
         if (fetchedEntity) {
             yield fetchedEntity.update({
                 description: "Updated description with update()",
@@ -51,7 +54,7 @@ const ExampleEntity_1 = require("./ExampleEntity");
             });
             console.log("Updated entity:", fetchedEntity);
         }
-        // 6️⃣ (Optional) Demonstrate query or fetchCollection
+        // 7️⃣ (Optional) Demonstrate query or fetchCollection
         // If you want to fetch a list of ExampleEntities (e.g., all documents in the "examples" collection),
         // you'd typically do something like:
         const allExamples = yield firestoreService_1.default.fetchCollection("examples");
@@ -62,7 +65,7 @@ const ExampleEntity_1 = require("./ExampleEntity");
         //   const docs = await FirestoreService.fetchCollection<ExampleData>("examples");
         //   return docs.map(d => new ExampleEntity(d));
         // }
-        // 7️⃣ Delete if desired
+        // 8️⃣ Delete if desired
         // if (fetchedEntity) {
         //   await fetchedEntity.delete();
         //   console.log("Deleted entity:", fetchedEntity.id);

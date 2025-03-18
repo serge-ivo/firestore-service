@@ -1,5 +1,6 @@
 // FieldValueExample.ts
 
+import { initializeApp } from "firebase/app";
 import FirestoreService from "../firestoreService";
 import { ExampleEntity } from "./ExampleEntity";
 
@@ -9,10 +10,14 @@ import { ExampleEntity } from "./ExampleEntity";
  * - deleteField
  */
 async function demoFieldValueOps() {
-  FirestoreService.initialize({
+  // Initialize Firebase app
+  const app = initializeApp({
     apiKey: "fake-api-key",
     projectId: "your-app",
   });
+
+  // Initialize Firestore with the Firebase app
+  FirestoreService.initialize(app);
 
   // 1️⃣ Create an entity that has (or can have) an array field
   //    Let’s assume we add a "tags" field to ExampleEntity for the sake of the demo

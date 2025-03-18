@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const app_1 = require("firebase/app");
 const firestoreService_1 = __importDefault(require("../firestoreService"));
 const ExampleEntity_1 = require("./ExampleEntity");
 /**
@@ -21,11 +22,13 @@ const ExampleEntity_1 = require("./ExampleEntity");
  */
 function demoRealTime() {
     return __awaiter(this, void 0, void 0, function* () {
-        // 1️⃣ Initialize Firestore if not already done
-        firestoreService_1.default.initialize({
+        // 1️⃣ Initialize Firebase app and Firestore
+        const app = (0, app_1.initializeApp)({
             apiKey: "fake-api-key",
             projectId: "your-app",
         });
+        // Initialize Firestore with the Firebase app
+        firestoreService_1.default.initialize(app);
         // 2️⃣ Create a sample document to watch
         const newEntity = yield ExampleEntity_1.ExampleEntity.create({
             title: "Realtime Demo",

@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const app_1 = require("firebase/app");
 const firestoreService_1 = __importDefault(require("../firestoreService"));
 const ExampleEntity_1 = require("./ExampleEntity");
 /**
@@ -22,10 +23,13 @@ const ExampleEntity_1 = require("./ExampleEntity");
  */
 function demoFieldValueOps() {
     return __awaiter(this, void 0, void 0, function* () {
-        firestoreService_1.default.initialize({
+        // Initialize Firebase app
+        const app = (0, app_1.initializeApp)({
             apiKey: "fake-api-key",
             projectId: "your-app",
         });
+        // Initialize Firestore with the Firebase app
+        firestoreService_1.default.initialize(app);
         // 1️⃣ Create an entity that has (or can have) an array field
         //    Let’s assume we add a "tags" field to ExampleEntity for the sake of the demo
         const newEntity = yield ExampleEntity_1.ExampleEntity.create({

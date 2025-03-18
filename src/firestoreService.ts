@@ -1,5 +1,5 @@
 // src/services/FirestoreService.ts
-import { FirebaseApp, initializeApp } from "firebase/app";
+import { FirebaseApp } from "firebase/app";
 import {
   addDoc,
   arrayRemove,
@@ -56,23 +56,22 @@ interface QueryOptions {
 import { connectFirestoreEmulator } from "firebase/firestore";
 
 export class FirestoreService {
-  private static app: FirebaseApp;
   private static db: Firestore;
 
-  // Initialize Firebase app and Firestore
-  static initialize(firebaseConfig: Record<string, any>) {
-    if (!this.app) {
-      this.app = initializeApp(firebaseConfig);
-
-      if (process.env.NODE_ENV === "test") {
-        this.db = initializeFirestore(this.app, {});
-      } else {
-        this.db = initializeFirestore(this.app, {
-          localCache: persistentLocalCache({
-            tabManager: persistentMultipleTabManager(),
-          }),
-        });
-      }
+  /**
+   * Initialize Firestore using an existing Firebase app instance.
+   * Note: You must initialize Firebase app yourself before calling this method.
+   * @param app - An initialized Firebase app instance
+   */
+  static initialize(app: FirebaseApp) {
+    if (process.env.NODE_ENV === "test") {
+      this.db = initializeFirestore(app, {});
+    } else {
+      this.db = initializeFirestore(app, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+        }),
+      });
     }
   }
 

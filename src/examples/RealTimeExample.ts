@@ -1,5 +1,6 @@
 // RealTimeExample.ts
 
+import { initializeApp } from "firebase/app";
 import FirestoreService from "../firestoreService";
 import { ExampleData, ExampleEntity } from "./ExampleEntity";
 
@@ -8,11 +9,14 @@ import { ExampleData, ExampleEntity } from "./ExampleEntity";
  * for real-time updates.
  */
 async function demoRealTime() {
-  // 1️⃣ Initialize Firestore if not already done
-  FirestoreService.initialize({
+  // 1️⃣ Initialize Firebase app and Firestore
+  const app = initializeApp({
     apiKey: "fake-api-key",
     projectId: "your-app",
   });
+
+  // Initialize Firestore with the Firebase app
+  FirestoreService.initialize(app);
 
   // 2️⃣ Create a sample document to watch
   const newEntity = await ExampleEntity.create({

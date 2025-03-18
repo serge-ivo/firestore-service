@@ -78,16 +78,19 @@ yarn add @serge-ivo/firestore-client
 ### Initialization
 
 ```typescript
+import { initializeApp } from "firebase/app";
 import { FirestoreService } from "@serge-ivo/firestore-client";
 
-// Initialize the service with your Firebase config and limits
-FirestoreService.initialize({
-  // Firebase config
+// Initialize Firebase app with your config
+const app = initializeApp({
   projectId: "your-project",
   apiKey: "your-api-key",
   authDomain: "your-project.firebaseapp.com",
   // ... other Firebase config options
 });
+
+// Initialize Firestore service with your Firebase app
+FirestoreService.initialize(app);
 ```
 
 ### Basic Operations
@@ -158,7 +161,13 @@ unsubscribeCollection();
 ### Authentication
 
 ```typescript
+import { initializeApp } from "firebase/app";
 import { AuthService } from "@serge-ivo/firestore-client";
+
+// Initialize Firebase app first
+const app = initializeApp({
+  // Your Firebase config
+});
 
 // Initialize AuthService with your Firebase app
 AuthService.initialize(app);
