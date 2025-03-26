@@ -63,16 +63,8 @@ export class FirestoreService {
    * Note: You must initialize Firebase app yourself before calling this method.
    * @param app - An initialized Firebase app instance
    */
-  static initialize(app: FirebaseApp) {
-    if (process.env.NODE_ENV === "test") {
-      this.db = initializeFirestore(app, {});
-    } else {
-      this.db = initializeFirestore(app, {
-        localCache: persistentLocalCache({
-          tabManager: persistentMultipleTabManager(),
-        }),
-      });
-    }
+  static initialize(db: Firestore) {
+    this.db = db;
   }
 
   static connectEmulator(firestoreEmulatorPort: number) {
