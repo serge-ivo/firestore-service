@@ -1,5 +1,4 @@
-import { FirebaseApp } from "firebase/app";
-import { arrayRemove, arrayUnion, QueryConstraint, SetOptions, Timestamp, WriteBatch, FieldValue } from "firebase/firestore";
+import { arrayRemove, arrayUnion, Firestore, QueryConstraint, SetOptions, Timestamp, WriteBatch, FieldValue } from "firebase/firestore";
 import { FirestoreModel } from "./firestoreModel";
 export type FilterOperator = "==" | "!=" | "<" | "<=" | ">" | ">=" | "array-contains" | "in" | "array-contains-any" | "not-in";
 interface QueryOptions {
@@ -21,7 +20,7 @@ export declare class FirestoreService {
      * Note: You must initialize Firebase app yourself before calling this method.
      * @param app - An initialized Firebase app instance
      */
-    static initialize(app: FirebaseApp): void;
+    static initialize(db: Firestore): void;
     static connectEmulator(firestoreEmulatorPort: number): void;
     private static doc;
     private static collection;

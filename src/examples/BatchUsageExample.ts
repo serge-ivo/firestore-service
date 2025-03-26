@@ -3,6 +3,8 @@
 import { initializeApp } from "firebase/app";
 import FirestoreService from "../firestoreService";
 import { ExampleEntity } from "../examples/ExampleEntity";
+import { initializeFirestore, persistentLocalCache } from "firebase/firestore";
+import { persistentMultipleTabManager } from "firebase/firestore";
 
 /**
  * Demonstrates how to use FirestoreService.getBatch() alongside
@@ -16,8 +18,14 @@ async function demoBatchWrites() {
     projectId: "your-app",
   });
 
+  const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+  });
+
   // Initialize Firestore with the Firebase app
-  FirestoreService.initialize(app);
+  FirestoreService.initialize(db);
 
   // 2️⃣ Create two new ExampleEntity documents
   const entityA = await ExampleEntity.create({

@@ -16,6 +16,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const app_1 = require("firebase/app");
 const firestoreService_1 = __importDefault(require("../firestoreService"));
 const ExampleEntity_1 = require("./ExampleEntity");
+const firestore_1 = require("firebase/firestore");
 /**
  * Demonstrates FirestoreService.getFieldValue() usage:
  * - arrayUnion / arrayRemove
@@ -29,7 +30,12 @@ function demoFieldValueOps() {
             projectId: "your-app",
         });
         // Initialize Firestore with the Firebase app
-        firestoreService_1.default.initialize(app);
+        const db = (0, firestore_1.initializeFirestore)(app, {
+            localCache: (0, firestore_1.persistentLocalCache)({
+                tabManager: (0, firestore_1.persistentMultipleTabManager)(),
+            }),
+        });
+        firestoreService_1.default.initialize(db);
         // 1️⃣ Create an entity that has (or can have) an array field
         //    Let’s assume we add a "tags" field to ExampleEntity for the sake of the demo
         const newEntity = yield ExampleEntity_1.ExampleEntity.create({

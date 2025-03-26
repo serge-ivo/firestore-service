@@ -16,6 +16,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const app_1 = require("firebase/app");
 const firestoreService_1 = __importDefault(require("../firestoreService"));
 const ExampleEntity_1 = require("./ExampleEntity");
+const firestore_1 = require("firebase/firestore");
 /**
  * Demonstrates how to use subscribeToDocument and subscribeToCollection
  * for real-time updates.
@@ -28,7 +29,12 @@ function demoRealTime() {
             projectId: "your-app",
         });
         // Initialize Firestore with the Firebase app
-        firestoreService_1.default.initialize(app);
+        const db = (0, firestore_1.initializeFirestore)(app, {
+            localCache: (0, firestore_1.persistentLocalCache)({
+                tabManager: (0, firestore_1.persistentMultipleTabManager)(),
+            }),
+        });
+        firestoreService_1.default.initialize(db);
         // 2️⃣ Create a sample document to watch
         const newEntity = yield ExampleEntity_1.ExampleEntity.create({
             title: "Realtime Demo",

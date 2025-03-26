@@ -3,7 +3,11 @@
 import { initializeApp } from "firebase/app";
 import FirestoreService from "../firestoreService";
 import { ExampleData, ExampleEntity } from "./ExampleEntity";
-
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from "firebase/firestore";
 /**
  * Demonstrates how to use subscribeToDocument and subscribeToCollection
  * for real-time updates.
@@ -16,7 +20,12 @@ async function demoRealTime() {
   });
 
   // Initialize Firestore with the Firebase app
-  FirestoreService.initialize(app);
+  const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+  });
+  FirestoreService.initialize(db);
 
   // 2️⃣ Create a sample document to watch
   const newEntity = await ExampleEntity.create({

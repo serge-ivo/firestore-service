@@ -16,6 +16,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const app_1 = require("firebase/app");
 const firestoreService_1 = __importDefault(require("../firestoreService"));
 const ExampleEntity_1 = require("./ExampleEntity");
+const firestore_1 = require("firebase/firestore");
 (function runDemo() {
     return __awaiter(this, void 0, void 0, function* () {
         // 1️⃣ Initialize Firebase app (only once in your app's lifecycle)
@@ -26,7 +27,12 @@ const ExampleEntity_1 = require("./ExampleEntity");
             // etc.
         });
         // 2️⃣ Initialize Firestore using the Firebase app
-        firestoreService_1.default.initialize(app);
+        const db = (0, firestore_1.initializeFirestore)(app, {
+            localCache: (0, firestore_1.persistentLocalCache)({
+                tabManager: (0, firestore_1.persistentMultipleTabManager)(),
+            }),
+        });
+        firestoreService_1.default.initialize(db);
         // 3️⃣ (Optional) Connect to Firestore emulator for local dev
         // FirestoreService.connectEmulator(8080);
         // 4️⃣ Create a new ExampleEntity

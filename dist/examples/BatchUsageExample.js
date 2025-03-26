@@ -16,6 +16,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const app_1 = require("firebase/app");
 const firestoreService_1 = __importDefault(require("../firestoreService"));
 const ExampleEntity_1 = require("../examples/ExampleEntity");
+const firestore_1 = require("firebase/firestore");
+const firestore_2 = require("firebase/firestore");
 /**
  * Demonstrates how to use FirestoreService.getBatch() alongside
  * FirestoreService.updateDocumentInBatch/setDocumentInBatch/deleteDocumentInBatch
@@ -28,8 +30,13 @@ function demoBatchWrites() {
             apiKey: "fake-api-key",
             projectId: "your-app",
         });
+        const db = (0, firestore_1.initializeFirestore)(app, {
+            localCache: (0, firestore_1.persistentLocalCache)({
+                tabManager: (0, firestore_2.persistentMultipleTabManager)(),
+            }),
+        });
         // Initialize Firestore with the Firebase app
-        firestoreService_1.default.initialize(app);
+        firestoreService_1.default.initialize(db);
         // 2️⃣ Create two new ExampleEntity documents
         const entityA = yield ExampleEntity_1.ExampleEntity.create({
             title: "Batch Doc A",

@@ -3,7 +3,11 @@
 import { initializeApp } from "firebase/app";
 import FirestoreService from "../firestoreService";
 import { ExampleEntity } from "./ExampleEntity";
-
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from "firebase/firestore";
 (async function runDemo() {
   // 1️⃣ Initialize Firebase app (only once in your app's lifecycle)
   const app = initializeApp({
@@ -14,7 +18,12 @@ import { ExampleEntity } from "./ExampleEntity";
   });
 
   // 2️⃣ Initialize Firestore using the Firebase app
-  FirestoreService.initialize(app);
+  const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+  });
+  FirestoreService.initialize(db);
 
   // 3️⃣ (Optional) Connect to Firestore emulator for local dev
   // FirestoreService.connectEmulator(8080);

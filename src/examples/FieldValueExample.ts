@@ -3,7 +3,11 @@
 import { initializeApp } from "firebase/app";
 import FirestoreService from "../firestoreService";
 import { ExampleEntity } from "./ExampleEntity";
-
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from "firebase/firestore";
 /**
  * Demonstrates FirestoreService.getFieldValue() usage:
  * - arrayUnion / arrayRemove
@@ -17,7 +21,12 @@ async function demoFieldValueOps() {
   });
 
   // Initialize Firestore with the Firebase app
-  FirestoreService.initialize(app);
+  const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+  });
+  FirestoreService.initialize(db);
 
   // 1️⃣ Create an entity that has (or can have) an array field
   //    Let’s assume we add a "tags" field to ExampleEntity for the sake of the demo
