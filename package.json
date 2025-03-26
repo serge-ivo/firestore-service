@@ -21,7 +21,11 @@
     "start:emulators": "firebase emulators:start --only firestore --project firestore-service-test",
     "test": "jest --detectOpenHandles --runInBand",
     "test:emulator": "npm run start:emulators & sleep 5 && npm test",
-    "build": "tsc"
+    "build": "tsc",
+    "type:check": "tsc --noEmit",
+    "type:build": "tsc --emitDeclarationOnly",
+    "type:watch": "tsc --watch --emitDeclarationOnly",
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",

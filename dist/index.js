@@ -21,4 +21,5 @@ exports.FirestoreService = void 0;
 var firestoreService_1 = require("./firestoreService");
 Object.defineProperty(exports, "FirestoreService", { enumerable: true, get: function () { return __importDefault(firestoreService_1).default; } });
 __exportStar(require("./firestoreModel"), exports);
+__exportStar(require("./types"), exports);
 //# sourceMappingURL=index.js.map

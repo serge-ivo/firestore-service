@@ -21,6 +21,142 @@ npm install @serge-ivo/firestore-client
 yarn add @serge-ivo/firestore-client
 ```
 
+## Type System
+
+The library provides comprehensive TypeScript types for all operations. Here's how to work with types:
+
+### Available Types
+
+```typescript
+// Query Types
+type FilterOperator =
+  | "=="
+  | "!="
+  | "<"
+  | "<="
+  | ">"
+  | ">="
+  | "array-contains"
+  | "in"
+  | "array-contains-any"
+  | "not-in";
+
+interface WhereClause {
+  field: string;
+  op: FilterOperator;
+  value: any;
+}
+
+interface OrderByClause {
+  field: string;
+  direction?: "asc" | "desc";
+}
+
+interface QueryOptions {
+  where?: WhereClause[];
+  orderBy?: OrderByClause[];
+  limit?: number;
+}
+
+// Model Types
+interface FirestoreData {
+  id?: string;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+// Utility Types
+type WithId<T> = T & { id: string };
+type WithOptionalId<T> = T & { id?: string };
+type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+```
+
+### Type Usage Examples
+
+```typescript
+// Using WithId type
+interface User {
+  name: string;
+  email: string;
+}
+
+const user: WithId<User> = {
+  id: "123",
+  name: "John",
+  email: "john@example.com",
+};
+
+// Using DeepPartial for updates
+const updateData: DeepPartial<User> = {
+  name: "John Updated",
+};
+
+// Using QueryOptions
+const queryOpts: QueryOptions = {
+  where: [{ field: "status", op: "==", value: "active" }],
+  orderBy: [{ field: "createdAt", direction: "desc" }],
+  limit: 10,
+};
+```
+
+## Development
+
+### Type Management
+
+The library includes several npm scripts for type management:
+
+```bash
+# Check types without emitting files
+npm run type:check
+
+# Generate only type definition files
+npm run type:build
+
+# Watch mode for type generation (useful during development)
+npm run type:watch
+
+# Build everything (including types)
+npm run build
+```
+
+### Updating Types
+
+1. **Add New Types**:
+
+   - Edit `src/types/index.ts`
+   - Add your new type definitions
+   - Export them from the types file
+
+2. **Modify Existing Types**:
+
+   - Locate the type in `src/types/index.ts`
+   - Make your changes
+   - Run `npm run type:check` to verify changes
+
+3. **Publish Type Updates**:
+
+   ```bash
+   # Update version
+   npm version patch  # or minor/major
+
+   # Build and publish
+   npm publish
+   ```
+
+### Type Categories
+
+Types are organized into categories in `src/types/index.ts`:
+
+- **Query Types**: For query operations and filters
+- **Model Types**: Base types for Firestore documents
+- **Service Types**: Configuration and service-related types
+- **Field Value Types**: Types for Firestore field operations
+- **Subscription Types**: Types for real-time subscriptions
+- **Error Types**: Custom error types
+- **Utility Types**: Helper types for common operations
+
 ## Features
 
 ### Core Features
@@ -34,36 +170,7 @@ yarn add @serge-ivo/firestore-client
 ### Developer Experience
 
 - Simplified Firestore operations
-- Full TypeScript support with comprehensive type definitions:
-
-  ```typescript
-  // Available types
-  type FilterOperator =
-    | "=="
-    | "!="
-    | "<"
-    | "<="
-    | ">"
-    | ">="
-    | "array-contains"
-    | "in"
-    | "array-contains-any"
-    | "not-in";
-
-  interface QueryOptions {
-    where?: Array<{
-      field: string;
-      op: FilterOperator;
-      value: any;
-    }>;
-    orderBy?: Array<{
-      field: string;
-      direction?: "asc" | "desc";
-    }>;
-    limit?: number;
-  }
-  ```
-
+- Full TypeScript support with comprehensive type definitions
 - Works with both Firebase Admin SDK and Firebase Client SDK
 - Built-in Firebase emulator support for testing
 
@@ -300,28 +407,6 @@ unsubscribeCollection();
    }
    ```
 
-## Testing
-
-This library uses Jest for testing. Tests are run against the Firebase Emulator Suite.
-
-1. Start the Firebase emulators:
-
-   ```bash
-   npm run start:emulators
-   ```
-
-2. In a separate terminal, run the tests:
-   ```bash
-   npm test
-   ```
-
-The tests will verify core functionality including:
-
-- Document operations (create, read, update, delete)
-- Collection queries
-- Batch operations
-- Rate limiting and usage controls
-
 4. **Clean Up Subscriptions**
 
    ```typescript
@@ -344,47 +429,27 @@ The tests will verify core functionality including:
    await FirestoreService.deleteCollection("users");
    ```
 
-## Development
-
-1. Clone the repository:
-
-```bash
-git clone https://github.com/serge-ivo/firestore-service.git
-```
-
-2. Install dependencies:
-
-```bash
-yarn install
-```
-
-3. Run tests (requires Firebase emulators):
-
-```bash
-yarn test
-```
-
-4. Build the package:
-
-```bash
-yarn build
-```
-
 ## Testing
 
-Tests are run against Firebase emulators. To run the test suite:
+This library uses Jest for testing. Tests are run against the Firebase Emulator Suite.
 
-1. Start the emulators:
+1. Start the Firebase emulators:
 
-```bash
-yarn start:emulators
-```
+   ```bash
+   npm run start:emulators
+   ```
 
 2. In a separate terminal, run the tests:
+   ```bash
+   npm test
+   ```
 
-```bash
-yarn test
-```
+The tests will verify core functionality including:
+
+- Document operations (create, read, update, delete)
+- Collection queries
+- Batch operations
+- Rate limiting and usage controls
 
 ## License
 
