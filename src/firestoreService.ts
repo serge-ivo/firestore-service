@@ -125,7 +125,12 @@ export class FirestoreService {
    * @throws Error if db is not provided or invalid
    */
   static initialize(db: Firestore) {
-    if (!db) {
+    if (
+      !db ||
+      typeof db !== "object" ||
+      !("type" in db) ||
+      db.type !== "firestore"
+    ) {
       throw new Error("Firestore instance is required for initialization");
     }
     this.db = db;
