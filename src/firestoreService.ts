@@ -137,6 +137,13 @@ export class FirestoreService {
    * @throws Error if db is not provided or invalid
    */
   static initialize(db: Firestore) {
+    // Only initialize if not already done
+    if (this.isInitialized) {
+      // Optional: Log that it's already initialized
+      // console.log("FirestoreService already initialized.");
+      return;
+    }
+
     if (
       !db ||
       typeof db !== "object" ||
