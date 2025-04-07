@@ -8,6 +8,7 @@
 import { getApp, deleteApp, initializeApp } from "firebase/app"; // for clean teardown
 import FirestoreService from "../src/firestoreService";
 import { ExampleEntity, ExampleData } from "../src/examples/ExampleEntity";
+import { getFirestore } from "firebase/firestore";
 
 // Increase timeout (5s default can be too short for emulator tests).
 jest.setTimeout(20000);
@@ -24,8 +25,9 @@ beforeAll(() => {
     appId: "test-app-id",
   });
 
+  const firestore = getFirestore(app);
   // Initialize Firestore with the Firebase app
-  FirestoreService.initialize(app);
+  FirestoreService.initialize(firestore);
 
   // Connect to local emulator on the port you use (default 8080 for Firestore)
   FirestoreService.connectEmulator(9098);

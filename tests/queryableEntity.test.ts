@@ -6,7 +6,7 @@ import {
   QueryableEntity,
   QueryableEntityData,
 } from "../src/examples/QueryableEntity";
-
+import { getFirestore } from "firebase/firestore";
 jest.setTimeout(20000);
 
 // 1️⃣ Global init + emulator connection
@@ -21,7 +21,8 @@ beforeAll(() => {
   });
 
   // Initialize Firestore with the Firebase app
-  FirestoreService.initialize(app);
+  const firestore = getFirestore(app);
+  FirestoreService.initialize(firestore);
   FirestoreService.connectEmulator(9098);
 });
 

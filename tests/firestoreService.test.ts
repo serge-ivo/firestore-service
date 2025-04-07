@@ -30,7 +30,8 @@ describe("🔥 FirestoreService - Full Tests", () => {
   // 1️⃣ Single initialization + emulator connect
   beforeAll(async () => {
     const app = initializeApp(firebaseConfig);
-    FirestoreService.initialize(app);
+    const firestore = getFirestore(app);
+    FirestoreService.initialize(firestore);
     FirestoreService.connectEmulator(9098);
     db = getFirestore(); // get updated Firestore instance if needed
     console.log("🔥 Starting Firestore & Auth tests against emulator...");
