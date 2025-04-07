@@ -1,6 +1,4 @@
-import { FirestoreService } from "../firestoreService";
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { firestoreService } from "./setup"; // Import the instance
 import { FirestoreModel } from "../firestoreModel"; // Import base model
 
 // Define a minimal dummy model for query tests
@@ -12,10 +10,18 @@ class DummyQueryModel extends FirestoreModel {
 
   // Constructor matching FirestoreModel (takes optional id)
   constructor(data?: Partial<DummyQueryModel>, id?: string) {
-    super(id); // Call base constructor with optional id
+    // Pass data and id in the expected object format to the base constructor
+    super({
+      ...(data && typeof data === "object" ? data : {}),
+      ...(id !== undefined ? { id } : {}),
+    });
+    // The base constructor now handles assigning properties from the data object,
+    // so the Object.assign below is removed.
+    /*
     if (data) {
       Object.assign(this, data);
     }
+    */
   }
 
   // --- Required abstract methods ---
@@ -39,16 +45,17 @@ describe("Query Operations", () => {
   ];
 
   beforeEach(async () => {
-    // Clean up existing test data before each test using deleteDocument
-    const docs = await FirestoreService.fetchCollection<{ id: string }>("test");
+    // Use instance method for fetchCollection
+    const docs = await firestoreService.fetchCollection<{ id: string }>("test");
     for (const doc of docs) {
-      await FirestoreService.deleteDocument(`test/${doc.id}`);
+      // Use instance method for deleteDocument
+      await firestoreService.deleteDocument(`test/${doc.id}`);
     }
 
-    // Add fresh test data using the Dummy model's path
-    const colPath = DummyQueryModel.prototype.getColPath(); // Get path without instance
+    const colPath = DummyQueryModel.prototype.getColPath();
     for (const data of testData) {
-      await FirestoreService.addDocument(colPath, data);
+      // Use instance method for addDocument
+      await firestoreService.addDocument(colPath, data);
     }
   });
 
@@ -57,8 +64,8 @@ describe("Query Operations", () => {
       where: [{ field: "value", op: ">" as const, value: 15 }],
     };
     const colPath = DummyQueryModel.prototype.getColPath();
-    const results = await FirestoreService.queryCollection(
-      DummyQueryModel,
+    // Use instance method for queryCollection
+    const results = await firestoreService.queryCollection<DummyQueryModel>(
       colPath,
       query
     );
@@ -71,8 +78,8 @@ describe("Query Operations", () => {
       orderBy: [{ field: "value", direction: "desc" as const }],
     };
     const colPath = DummyQueryModel.prototype.getColPath();
-    const results = await FirestoreService.queryCollection(
-      DummyQueryModel,
+    // Use instance method for queryCollection
+    const results = await firestoreService.queryCollection<DummyQueryModel>(
       colPath,
       query
     );
@@ -86,8 +93,8 @@ describe("Query Operations", () => {
       limit: 2,
     };
     const colPath = DummyQueryModel.prototype.getColPath();
-    const results = await FirestoreService.queryCollection(
-      DummyQueryModel,
+    // Use instance method for queryCollection
+    const results = await firestoreService.queryCollection<DummyQueryModel>(
       colPath,
       query
     );
@@ -96,8 +103,8 @@ describe("Query Operations", () => {
 
   it("should paginate results", async () => {
     const colPath = DummyQueryModel.prototype.getColPath();
-    const firstPage = await FirestoreService.queryCollection(
-      DummyQueryModel,
+    // Use instance method for queryCollection
+    const firstPage = await firestoreService.queryCollection<DummyQueryModel>(
       colPath,
       {
         limit: 2,
@@ -108,8 +115,8 @@ describe("Query Operations", () => {
       throw new Error("Pagination test requires initial data to be present.");
     }
     const lastDoc = firstPage[firstPage.length - 1];
-    const nextPage = await FirestoreService.queryCollection(
-      DummyQueryModel,
+    // Use instance method for queryCollection
+    const nextPage = await firestoreService.queryCollection<DummyQueryModel>(
       colPath,
       {
         startAfter: lastDoc.value,
@@ -128,8 +135,8 @@ describe("Query Operations", () => {
       limit: 1,
     };
     const colPath = DummyQueryModel.prototype.getColPath();
-    const results = await FirestoreService.queryCollection(
-      DummyQueryModel,
+    // Use instance method for queryCollection
+    const results = await firestoreService.queryCollection<DummyQueryModel>(
       colPath,
       query
     );
@@ -142,8 +149,8 @@ describe("Query Operations", () => {
       where: [{ field: "value", op: ">" as const, value: 100 }],
     };
     const colPath = DummyQueryModel.prototype.getColPath();
-    const results = await FirestoreService.queryCollection(
-      DummyQueryModel,
+    // Use instance method for queryCollection
+    const results = await firestoreService.queryCollection<DummyQueryModel>(
       colPath,
       query
     );
@@ -158,8 +165,8 @@ describe("Query Operations", () => {
       ],
     };
     const colPath = DummyQueryModel.prototype.getColPath();
-    const results = await FirestoreService.queryCollection(
-      DummyQueryModel,
+    // Use instance method for queryCollection
+    const results = await firestoreService.queryCollection<DummyQueryModel>(
       colPath,
       query
     );

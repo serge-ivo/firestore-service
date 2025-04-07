@@ -5,98 +5,102 @@
  * via ExampleEntity and FirestoreService, connected to the Firestore emulator.
  */
 
-import { FirestoreService } from '../firestoreService';
-import { ExampleEntity, ExampleData } from '../examples/ExampleEntity';
+import { firestoreService } from "./setup"; // Import the instance
+import { ExampleEntity, ExampleData } from "../examples/ExampleEntity";
 
-describe('🔥 FirestoreService - ExampleEntity Tests', () => {
-  const testCollection = 'examples';
+describe("🔥 FirestoreService - ExampleEntity Interaction Tests", () => {
+  const testCollectionPath = "examples";
+  const testData: ExampleData = {
+    title: "Example Test Title",
+    description: "A description for the test",
+    createdAt: new Date(), // Timestamps will be handled by Firestore
+    updatedAt: new Date(), // Timestamps will be handled by Firestore
+    owner: "test-owner",
+  };
 
   beforeEach(async () => {
-    // Clean up any existing test documents
-    try {
-      await FirestoreService.deleteCollection(testCollection);
-    } catch (error) {
-      // Ignore errors if collection doesn't exist
+    const docs = await firestoreService.fetchCollection<
+      { id: string } & ExampleData
+    >(testCollectionPath);
+    for (const doc of docs) {
+      await firestoreService.deleteDocument(`${testCollectionPath}/${doc.id}`);
     }
   });
 
-  it('should create and save a new example entity', async () => {
-    const entityData: ExampleData = {
-      title: 'Test Entity',
-      description: 'A test entity',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      owner: 'test-user',
-    };
+  it("should create a document using firestoreService", async () => {
+    const docId = await firestoreService.addDocument(
+      testCollectionPath,
+      testData
+    );
+    expect(docId).toBeDefined();
 
-    const entity = await ExampleEntity.create(entityData);
-    expect(entity.id).toBeDefined();
-
-    const retrievedEntity = await ExampleEntity.getById(entity.id!);
-    expect(retrievedEntity).toBeDefined();
-    expect(retrievedEntity?.title).toBe('Test Entity');
-    expect(retrievedEntity?.description).toBe('A test entity');
-    expect(retrievedEntity?.owner).toBe('test-user');
+    // Verify the document was created correctly
+    const fetchedDoc = await firestoreService.getDocument<ExampleData>(
+      `${testCollectionPath}/${docId}`
+    );
+    expect(fetchedDoc).not.toBeNull();
+    expect(fetchedDoc?.title).toBe(testData.title);
+    expect(fetchedDoc?.owner).toBe(testData.owner);
   });
 
-  it('should update an existing example entity', async () => {
-    const entityData: ExampleData = {
-      title: 'Test Entity',
-      description: 'A test entity',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      owner: 'test-user',
-    };
+  it("should update an existing document using firestoreService", async () => {
+    // 1. Create document
+    const docId = await firestoreService.addDocument(
+      testCollectionPath,
+      testData
+    );
+    expect(docId).toBeDefined();
 
-    const entity = await ExampleEntity.create(entityData);
-    expect(entity.id).toBeDefined();
+    // 2. Update using the service
+    const updatedTitle = "Updated Via Service";
+    await firestoreService.updateDocument(
+      `${testCollectionPath}/${docId}`,
+      { title: updatedTitle } // Pass only the changed data
+    );
 
-    await entity.update({
-      title: 'Updated Entity',
-      description: 'An updated test entity',
-    });
-
-    const updatedEntity = await ExampleEntity.getById(entity.id!);
-    expect(updatedEntity).toBeDefined();
-    expect(updatedEntity?.title).toBe('Updated Entity');
-    expect(updatedEntity?.description).toBe('An updated test entity');
-    expect(updatedEntity?.owner).toBe('test-user');
+    // 3. Verify update
+    const fetchedDoc = await firestoreService.getDocument<ExampleData>(
+      `${testCollectionPath}/${docId}`
+    );
+    expect(fetchedDoc).not.toBeNull();
+    expect(fetchedDoc!.title).toBe(updatedTitle);
+    expect(fetchedDoc!.description).toBe(testData.description); // Check other fields remain
   });
 
-  it('should fetch an example entity by ID', async () => {
-    const entityData: ExampleData = {
-      title: 'Test Entity',
-      description: 'A test entity',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      owner: 'test-user',
-    };
+  it("should fetch an entity by ID using firestoreService", async () => {
+    // 1. Create document
+    const docId = await firestoreService.addDocument(
+      testCollectionPath,
+      testData
+    );
+    expect(docId).toBeDefined();
 
-    const entity = await ExampleEntity.create(entityData);
-    expect(entity.id).toBeDefined();
-
-    const retrievedEntity = await ExampleEntity.getById(entity.id!);
-    expect(retrievedEntity).toBeDefined();
-    expect(retrievedEntity?.title).toBe('Test Entity');
-    expect(retrievedEntity?.description).toBe('A test entity');
-    expect(retrievedEntity?.owner).toBe('test-user');
+    // 2. Fetch using firestoreService
+    const fetchedDoc = await firestoreService.getDocument<
+      ExampleData & { id: string }
+    >(`${testCollectionPath}/${docId}`);
+    expect(fetchedDoc).not.toBeNull();
+    expect(fetchedDoc!.id).toBe(docId);
+    expect(fetchedDoc!.title).toBe(testData.title);
+    expect(fetchedDoc!.description).toBe(testData.description);
+    expect(fetchedDoc?.createdAt).toBeInstanceOf(Date); // Verify timestamp conversion
   });
 
-  it('should delete an example entity', async () => {
-    const entityData: ExampleData = {
-      title: 'Test Entity',
-      description: 'A test entity',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      owner: 'test-user',
-    };
+  it("should delete a document using firestoreService", async () => {
+    // 1. Create document
+    const docId = await firestoreService.addDocument(
+      testCollectionPath,
+      testData
+    );
+    expect(docId).toBeDefined();
 
-    const entity = await ExampleEntity.create(entityData);
-    expect(entity.id).toBeDefined();
+    // 2. Delete using the service
+    await firestoreService.deleteDocument(`${testCollectionPath}/${docId}`);
 
-    await entity.delete();
-
-    const deletedEntity = await ExampleEntity.getById(entity.id!);
-    expect(deletedEntity).toBeNull();
+    // 3. Verify deletion
+    const fetchedDoc = await firestoreService.getDocument<ExampleData>(
+      `${testCollectionPath}/${docId}`
+    );
+    expect(fetchedDoc).toBeNull();
   });
 });

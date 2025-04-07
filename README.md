@@ -2,24 +2,199 @@
 
 A TypeScript/JavaScript library that provides controlled and cost-effective Firestore data management. This library helps prevent abuse and excessive costs in your Firebase applications by implementing configurable rate limiting and usage controls.
 
+**Note:** This library requires instantiation. You must create an instance of `FirestoreService` by passing it a configured Firestore `db` object.
+
 ## Why Use This Library?
 
-- **Cost Control**: Prevents unexpected Firebase costs by limiting the number of reads and writes
-- **Abuse Prevention**: Protects your application from potential abuse by implementing query limits
-- **Safe Development**: Helps maintain controlled usage during development and testing
-- **Configurable Limits**: Set custom thresholds for:
-  - Number of documents read/written per request
-  - Query result size limits
-  - Rate limiting for operations
-  - Batch operation size controls
+- **Cost Control**: Prevents unexpected Firebase costs by limiting the number of reads and writes (via `RequestLimiter`, requires separate configuration).
+- **Abuse Prevention**: Protects your application from potential abuse by implementing query limits (partially via `QueryOptions` limit, more robust prevention via `RequestLimiter`).
+- **Clear Structure**: Provides a consistent, instance-based API for Firestore operations.
+- **Type Safety**: Leverages TypeScript for improved development experience.
 
 ## Installation
 
 ```bash
-npm install @serge-ivo/firestore-client
+npm install @serge-ivo/firestore-client firebase
 # or
-yarn add @serge-ivo/firestore-client
+yarn add @serge-ivo/firestore-client firebase
 ```
+
+## Basic Setup & Usage
+
+1.  **Initialize Firebase and get the `db` object:**
+
+    ```typescript
+    // Example: src/firebase.ts
+    import { initializeApp } from "firebase/app";
+    import { getFirestore, Firestore } from "firebase/firestore";
+
+    const firebaseConfig = {
+      // Your Firebase config details here
+      apiKey: "...",
+      authDomain: "...",
+      projectId: "...",
+      // ...etc
+    };
+
+    const app = initializeApp(firebaseConfig);
+    export const db: Firestore = getFirestore(app);
+    ```
+
+2.  **Create a `FirestoreService` instance:**
+
+    It's recommended to create a single instance (singleton) and export it for use throughout your application.
+
+    ```typescript
+    // Example: src/firestore.ts or integrate into src/firebase.ts
+    import { db } from "./firebase"; // Import the db instance
+    import { FirestoreService } from "@serge-ivo/firestore-client";
+
+    // Create and export the service instance
+    export const firestoreService = new FirestoreService(db);
+    ```
+
+3.  **Use the instance in your application:**
+
+    ```typescript
+    // Example: In a React component or service file
+    import { firestoreService } from "../firestore"; // Adjust path as needed
+    import { useEffect, useState } from "react";
+
+    interface User {
+      id?: string;
+      name: string;
+      email: string;
+    }
+
+    function UserProfile({ userId }: { userId: string }) {
+      const [user, setUser] = useState<User | null>(null);
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => {
+        const fetchUser = async () => {
+          setLoading(true);
+          try {
+            // Use the service instance methods
+            const userData = await firestoreService.getDocument<User>(
+              `users/${userId}`
+            );
+            setUser(userData);
+          } catch (error) {
+            console.error("Failed to fetch user:", error);
+          }
+          setLoading(false);
+        };
+        fetchUser();
+      }, [userId]);
+
+      if (loading) return <p>Loading...</p>;
+      if (!user) return <p>User not found.</p>;
+
+      return (
+        <div>
+          <h1>{user.name}</h1>
+          <p>{user.email}</p>
+        </div>
+      );
+    }
+    ```
+
+## API Reference
+
+All methods (except utility methods like `getTimestamp`) are now **instance methods** called on your created `firestoreService` instance.
+
+### Constructor
+
+```typescript
+// Create a new service instance
+constructor(db: Firestore)
+```
+
+### Document Operations
+
+```typescript
+// Get a single document
+async getDocument<T>(docPath: string): Promise<T | null>
+
+// Add a new document
+async addDocument<T>(collectionPath: string, data: T): Promise<string | undefined>
+
+// Update a document
+async updateDocument(docPath: string, data: Record<string, any>): Promise<void>
+
+// Set a document (create or overwrite)
+async setDocument<T>(docPath: string, data: T, options?: { merge?: boolean }): Promise<void>
+
+// Delete a document
+async deleteDocument(docPath: string): Promise<void>
+
+// Delete an entire collection (use with caution!)
+async deleteCollection(collectionPath: string): Promise<void>
+```
+
+### Collection Operations
+
+```typescript
+// Fetch collection with native Firestore query constraints
+async fetchCollection<T>(path: string, ...queryConstraints: QueryConstraint[]): Promise<T[]>
+
+// Query collection with structured options object
+async queryCollection<T>(collectionPath: string, options?: QueryOptions): Promise<T[]>
+```
+
+_Note: `QueryOptions` allows `where`, `orderBy`, `limit`, `startAfter`, `endBefore`._
+
+### Real-time Subscriptions
+
+```typescript
+// Subscribe to document changes
+subscribeToDocument<T>(docPath: string, callback: (data: T | null) => void): () => void
+
+// Subscribe to collection changes (raw data)
+subscribeToCollection<T>(collectionPath: string, callback: (data: T[]) => void): () => void
+
+// Subscribe to collection with FirestoreModel subclass instantiation
+subscribeToCollection2<T extends FirestoreModel>(model: new (...args: any[]) => T, collectionPath: string, callback: (data: T[]) => void): () => void
+```
+
+### Batch Operations
+
+```typescript
+// Get a new batch instance associated with this service's db
+getBatch(): WriteBatch
+
+// Add an update operation to a batch
+updateInBatch(batch: WriteBatch, docPath: string, data: { [key: string]: FieldValue | Partial<unknown> | undefined }): void
+
+// Add a set operation to a batch
+setInBatch<T>(batch: WriteBatch, docPath: string, data: T, options?: SetOptions): void
+
+// Add a delete operation to a batch
+deleteInBatch(batch: WriteBatch, docPath: string): void
+```
+
+### Static Utility Methods
+
+These can still be called directly on the `FirestoreService` class.
+
+```typescript
+// Get field value constants like arrayUnion, arrayRemove
+static getFieldValue(): { arrayUnion: ..., arrayRemove: ... }
+
+// Get a server timestamp
+static getTimestamp(): Timestamp
+
+// Get the sentinel value for deleting a field
+static deleteField(): FieldValue
+```
+
+## FirestoreModel Base Class (Optional)
+
+The library includes an optional `FirestoreModel` base class (`src/firestoreModel.ts`) that you can extend to add methods like `save()`, `update()`, `delete()` directly to your data model objects. See the source file and `ExampleEntity.ts` for usage.
+
+## Request Limiter (Optional)
+
+The `RequestLimiter` class (`src/RequestLimiter.ts`) is included but currently acts mostly as a placeholder or basic logger. To implement actual rate limiting or cost control, you would need to significantly enhance this class or integrate a more robust external library.
 
 ## Type System
 
@@ -78,247 +253,6 @@ type WithOptionalId<T> = T & { id?: string };
 type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
-```
-
-## API Reference
-
-### Core Methods
-
-#### Initialization
-
-```typescript
-// Initialize Firestore service
-static initialize(db: Firestore): void
-
-// Connect to Firestore emulator
-static connectEmulator(firestoreEmulatorPort: number): void
-```
-
-#### Document Operations
-
-```typescript
-// Get a single document
-static async getDocument<T>(docPath: string): Promise<T | null>
-
-// Add a new document
-static async addDocument<T>(collectionPath: string, data: T): Promise<string | undefined>
-
-// Update a document
-static async updateDocument(docPath: string, data: Record<string, any>): Promise<void>
-
-// Set a document (create or update)
-static async setDocument<T>(docPath: string, data: T, options: { merge?: boolean } = { merge: true }): Promise<void>
-
-// Delete a document
-static async deleteDocument(docPath: string): Promise<void>
-
-// Delete an entire collection
-static async deleteCollection(collectionPath: string): Promise<void>
-```
-
-#### Collection Operations
-
-```typescript
-// Fetch collection with query constraints
-static async fetchCollection<T>(path: string, ...queryConstraints: QueryConstraint[]): Promise<T[]>
-
-// Query collection with options
-static async queryCollection<T>(
-  model: new (data: any, id?: string) => T,
-  path: string,
-  options?: QueryOptions
-): Promise<T[]>
-```
-
-#### Real-time Subscriptions
-
-```typescript
-// Subscribe to document changes
-static subscribeToDocument<T>(
-  docPath: string,
-  callback: (data: T | null) => void
-): () => void
-
-// Subscribe to collection changes
-static subscribeToCollection<T>(
-  collectionPath: string,
-  callback: (data: T[]) => void
-): () => void
-
-// Subscribe to collection with model instantiation
-static subscribeToCollection2<T extends FirestoreModel>(
-  model: new (data: any) => T,
-  collectionPath: string,
-  callback: (data: T[]) => void
-): () => void
-```
-
-#### Batch Operations
-
-```typescript
-// Get a new batch
-static getBatch(): WriteBatch
-
-// Update document in batch
-static updateInBatch(
-  batch: WriteBatch,
-  docPath: string,
-  data: { [key: string]: FieldValue | Partial<unknown> | undefined }
-): void
-
-// Set document in batch
-static setInBatch<T>(
-  batch: WriteBatch,
-  docPath: string,
-  data: T,
-  options: SetOptions = {}
-): void
-
-// Delete document in batch
-static deleteInBatch(batch: WriteBatch, docPath: string): void
-```
-
-#### Field Value Operations
-
-```typescript
-// Get field value operations
-static getFieldValue(): {
-  arrayUnion: (...elements: any[]) => FieldValue;
-  arrayRemove: (...elements: any[]) => FieldValue;
-  increment: (n: number) => FieldValue;
-  serverTimestamp: () => FieldValue;
-}
-
-// Get timestamp
-static getTimestamp(): Timestamp
-
-// Get delete field operation
-static deleteField(): FieldValue
-```
-
-## Usage Examples
-
-### Basic Document Operations
-
-```typescript
-// Initialize
-import { initializeApp } from "firebase/app";
-import { initializeFirestore } from "firebase/firestore";
-import { FirestoreService } from "@serge-ivo/firestore-client";
-
-const app = initializeApp({
-  projectId: "your-project",
-  apiKey: "your-api-key",
-  authDomain: "your-project.firebaseapp.com",
-});
-
-const firestore = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager(),
-  }),
-});
-
-FirestoreService.initialize(firestore);
-
-// Create a document
-const docId = await FirestoreService.addDocument("users", {
-  name: "John Doe",
-  email: "john@example.com",
-});
-
-// Read a document
-const user = await FirestoreService.getDocument("users/123");
-
-// Update a document
-await FirestoreService.updateDocument("users/123", {
-  lastLogin: new Date(),
-});
-
-// Delete a document
-await FirestoreService.deleteDocument("users/123");
-```
-
-### Collection Queries
-
-```typescript
-// Query with filters
-const activeUsers = await FirestoreService.queryCollection(User, "users", {
-  where: [{ field: "status", op: "==", value: "active" }],
-  orderBy: [{ field: "createdAt", direction: "desc" }],
-  limit: 10,
-});
-
-// Fetch with constraints
-const recentPosts = await FirestoreService.fetchCollection<Post>(
-  "posts",
-  where("published", "==", true),
-  orderBy("createdAt", "desc"),
-  limit(5)
-);
-```
-
-### Real-time Subscriptions
-
-```typescript
-// Subscribe to document
-const unsubscribeDoc = FirestoreService.subscribeToDocument<User>(
-  "users/123",
-  (user) => {
-    if (user) {
-      console.log("User updated:", user);
-    }
-  }
-);
-
-// Subscribe to collection
-const unsubscribeCollection = FirestoreService.subscribeToCollection2(
-  User,
-  "users",
-  (users) => {
-    console.log("Users updated:", users);
-  }
-);
-
-// Clean up subscriptions
-unsubscribeDoc();
-unsubscribeCollection();
-```
-
-### Batch Operations
-
-```typescript
-// Create a batch
-const batch = FirestoreService.getBatch();
-
-// Add operations to batch
-FirestoreService.updateInBatch(batch, "users/123", {
-  lastLogin: new Date(),
-});
-
-FirestoreService.setInBatch(batch, "users/456", {
-  name: "New User",
-  email: "new@example.com",
-});
-
-FirestoreService.deleteInBatch(batch, "users/789");
-
-// Commit the batch
-await batch.commit();
-```
-
-### Field Value Operations
-
-```typescript
-const { arrayUnion, arrayRemove, increment, serverTimestamp } =
-  FirestoreService.getFieldValue();
-
-// Update array fields
-await FirestoreService.updateDocument("users/123", {
-  tags: arrayUnion("new-tag"),
-  favorites: arrayRemove("old-favorite"),
-  points: increment(10),
-  lastUpdated: serverTimestamp(),
-});
 ```
 
 ## Best Practices
@@ -400,4 +334,4 @@ The tests will verify core functionality including:
 
 ## License
 
-MIT © Serge Ivo
+[MIT](./LICENSE)

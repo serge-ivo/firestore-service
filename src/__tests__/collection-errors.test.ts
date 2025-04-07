@@ -1,5 +1,5 @@
-import { FirestoreService } from "../firestoreService";
 import { FirestoreModel } from "../firestoreModel"; // Import base model
+import { firestoreService } from "./setup"; // Import the instance
 
 // Define a minimal dummy model that extends FirestoreModel
 class DummyErrorModel extends FirestoreModel {
@@ -9,10 +9,18 @@ class DummyErrorModel extends FirestoreModel {
   value: any = null;
 
   constructor(data?: any, id?: string) {
-    super(id); // Call base constructor
+    // Pass data and id in the expected object format to the base constructor
+    super({
+      ...(data && typeof data === "object" ? data : {}),
+      ...(id !== undefined ? { id } : {}),
+    });
+    // The base constructor now handles assigning properties from the data object,
+    // so the Object.assign below is removed.
+    /*
     if (data) {
       Object.assign(this, data);
     }
+    */
   }
 
   // --- Required abstract methods ---
@@ -47,7 +55,8 @@ describe("Collection Error Handling", () => {
 
     for (const path of invalidPaths) {
       try {
-        await FirestoreService.addDocument(path, {});
+        // Use instance method
+        await firestoreService.addDocument(path, {});
         // If it reaches here, it didn't throw, which is a failure for this test
         throw new Error(
           `Expected addDocument to throw for path: "${path}" but it did not.`
@@ -64,14 +73,16 @@ describe("Collection Error Handling", () => {
     const validDeepPath = "test/doc1/subcol1";
     let docId: string | undefined;
     try {
-      docId = await FirestoreService.addDocument(validDeepPath, {
+      // Use instance method
+      docId = await firestoreService.addDocument(validDeepPath, {
         works: true,
       });
       expect(docId).toBeDefined();
     } finally {
       // Clean up the created document
       if (docId) {
-        await FirestoreService.deleteDocument(`${validDeepPath}/${docId}`);
+        // Use instance method
+        await firestoreService.deleteDocument(`${validDeepPath}/${docId}`);
       }
     }
   });
@@ -83,13 +94,15 @@ describe("Collection Error Handling", () => {
       symbol: Symbol("test"), // Symbols are not valid in Firestore
     };
 
+    // Use instance method
     await expect(
-      FirestoreService.addDocument("test", invalidData)
+      firestoreService.addDocument("test", invalidData)
     ).rejects.toThrow();
   });
 
   it("should handle non-existent collection queries", async () => {
-    const result = await FirestoreService.fetchCollection("non-existent");
+    // Use instance method
+    const result = await firestoreService.fetchCollection("non-existent");
     expect(result).toEqual([]);
   });
 
@@ -98,24 +111,26 @@ describe("Collection Error Handling", () => {
       where: [{ field: "name", op: "invalid-op" as any, value: "test" }],
     };
 
-    // Use the correctly defined DummyErrorModel
+    // Remove the unused DummyErrorModel argument
     await expect(
-      FirestoreService.queryCollection(DummyErrorModel, "test", invalidQuery)
+      firestoreService.queryCollection("test", invalidQuery)
     ).rejects.toThrow();
   });
 
   it("should handle invalid document references", async () => {
     // Valid path structure, but document doesn't exist
     const nonExistentPath = "test/doc/subcollection/doc2";
+    // Use instance method
     // Expect getDocument to resolve to null for a valid path to a non-existent doc
     await expect(
-      FirestoreService.getDocument(nonExistentPath)
+      firestoreService.getDocument(nonExistentPath)
     ).resolves.toBeNull();
 
     // Example of a path that *should* throw due to invalid segment count (odd)
     const invalidPathFormat = "test/doc/subcollection";
+    // Use instance method
     await expect(
-      FirestoreService.getDocument(invalidPathFormat)
+      firestoreService.getDocument(invalidPathFormat)
     ).rejects.toThrow();
   });
 });

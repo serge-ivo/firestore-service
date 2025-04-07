@@ -1,32 +1,32 @@
 // src/models/QueryableEntity.ts
 
 import { FirestoreModel } from "../firestoreModel";
-import { FirestoreService } from "../firestoreService";
-import type { FilterOperator } from "../firestoreService";
+// import { FirestoreService } from "../firestoreService"; // No longer needed
+import type { FilterOperator } from "../firestoreService"; // Keep type import for external use if needed
 
 export interface QueryableEntityData {
   userId: string;
   status: "active" | "inactive";
   category: string;
   createdAt: Date;
+  // Note: ID is handled by FirestoreModel base class and converter
 }
 
 /**
- * ✅ Demonstrates a Firestore entity that can be queried
- * without a custom save() — we rely on the base create() and update().
+ * ✅ QueryableEntity: Data representation + Path logic.
+ * Persistence (including querying) is handled by FirestoreService.
  */
 export class QueryableEntity extends FirestoreModel {
-  userId: string;
-  status: "active" | "inactive";
-  category: string;
-  createdAt: Date;
+  // Declare properties for type safety; assigned by base constructor
+  userId!: string;
+  status!: "active" | "inactive";
+  category!: string;
+  createdAt!: Date;
 
-  constructor(data: QueryableEntityData, id?: string) {
-    super(id);
-    this.userId = data.userId;
-    this.status = data.status;
-    this.category = data.category;
-    this.createdAt = data.createdAt;
+  // Update constructor to accept data object (with optional id)
+  constructor(data: { id?: string } & QueryableEntityData) {
+    super(data); // Pass the whole data object up
+    // Base constructor assigns properties via Object.assign
   }
 
   /**
@@ -37,6 +37,10 @@ export class QueryableEntity extends FirestoreModel {
     if (!this.id) {
       throw new Error("Document ID not set. Cannot build doc path.");
     }
+    // Ensure userId is assigned before calling this
+    if (!this.userId) {
+      throw new Error("User ID not set. Cannot build doc path.");
+    }
     return `users/${this.userId}/items/${this.id}`;
   }
 
@@ -45,73 +49,12 @@ export class QueryableEntity extends FirestoreModel {
    * - Collection path (e.g. "users/userId/items").
    */
   getColPath(): string {
+    // Ensure userId is assigned before calling this
+    if (!this.userId) {
+      throw new Error("User ID not set. Cannot build collection path.");
+    }
     return `users/${this.userId}/items`;
   }
 
-  /**
-   * ✅ Finds items by status in this user’s collection.
-   */
-  static async findByStatus(
-    userId: string,
-    status: "active" | "inactive"
-  ): Promise<QueryableEntity[]> {
-    const path = `users/${userId}/items`;
-    return FirestoreService.queryCollection<QueryableEntity>(
-      QueryableEntity,
-      path,
-      {
-        where: [{ field: "status", op: "==" as FilterOperator, value: status }],
-      }
-    );
-  }
-
-  /**
-   * ✅ Finds items by both status and category.
-   */
-  static async findByStatusAndCategory(
-    userId: string,
-    status: "active" | "inactive",
-    category: string
-  ): Promise<QueryableEntity[]> {
-    const path = `users/${userId}/items`;
-    return FirestoreService.queryCollection<QueryableEntity>(
-      QueryableEntity,
-      path,
-      {
-        where: [
-          { field: "status", op: "==" as FilterOperator, value: status },
-          { field: "category", op: "==" as FilterOperator, value: category },
-        ],
-      }
-    );
-  }
-
-  /**
-   * ✅ Finds recent 'active' items, optionally filtered by category,
-   *    ordered by createdAt descending.
-   */
-  static async findRecentActiveItems(
-    userId: string,
-    category?: string,
-    maxResults: number = 10
-  ): Promise<QueryableEntity[]> {
-    const path = `users/${userId}/items`;
-
-    const queryOptions = {
-      where: [
-        { field: "status", op: "==" as FilterOperator, value: "active" },
-        ...(category
-          ? [{ field: "category", op: "==" as FilterOperator, value: category }]
-          : []),
-      ],
-      orderBy: [{ field: "createdAt", direction: "desc" as const }],
-      limit: maxResults,
-    };
-
-    return FirestoreService.queryCollection<QueryableEntity>(
-      QueryableEntity,
-      path,
-      queryOptions
-    );
-  }
+  // Static find... methods were already removed
 }

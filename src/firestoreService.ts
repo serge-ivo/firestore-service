@@ -1,8 +1,10 @@
 /**
- * FirestoreService - A wrapper around Firebase Firestore providing type-safe operations
+ * FirestoreService - A wrapper around Firebase Firestore providing type-safe operations.
+ * This service needs to be instantiated with a Firestore database instance.
  *
  * @example
  * // 1️⃣ Basic Setup
+ * import { initializeApp } from 'firebase/app';
  * import { getFirestore } from 'firebase/firestore';
  * import { FirestoreService } from '@serge-ivo/firestore-client';
  *
@@ -10,25 +12,22 @@
  * const app = initializeApp(firebaseConfig);
  * const db = getFirestore(app);
  *
- * // Initialize FirestoreService
- * FirestoreService.initialize(db);
+ * // Create an instance of FirestoreService
+ * const firestoreService = new FirestoreService(db);
  *
  * @example
- * // 2️⃣ Using the Service
- * // After initialization, you can use any of the service methods
- * const doc = await FirestoreService.getDocument<User>('users/user123');
+ * // 2️⃣ Using the Service Instance
+ * // Use the created instance to call methods
+ * const user = await firestoreService.getDocument<User>('users/user123');
  *
  * @example
  * // 3️⃣ Common Error Cases
- * // ❌ Don't use before initialization
- * FirestoreService.getDocument('users/user123'); // Throws error
+ * // ❌ Don't instantiate without a valid Firestore instance
+ * // const invalidService = new FirestoreService(null); // Throws error
  *
- * // ❌ Don't initialize with invalid Firestore instance
- * FirestoreService.initialize(null); // Throws error
- *
- * // ✅ Correct usage
- * FirestoreService.initialize(db);
- * const result = await FirestoreService.getDocument('users/user123');
+ * // ✅ Correct usage:
+ * const firestoreService = new FirestoreService(db);
+ * const result = await firestoreService.getDocument('users/user123');
  */
 
 // src/services/FirestoreService.ts
@@ -38,6 +37,7 @@ import {
   arrayUnion,
   collection,
   CollectionReference,
+  connectFirestoreEmulator,
   deleteDoc,
   deleteField,
   doc,
@@ -62,7 +62,8 @@ import {
   writeBatch,
 } from "firebase/firestore";
 
-import FirestoreDataConverter from "./FirestoreDataConverter";
+// Correctly import the local factory function
+import createFirestoreDataConverter from "./FirestoreDataConverter";
 import { FirestoreModel } from "./firestoreModel";
 import RequestLimiter from "./RequestLimiter";
 
@@ -86,13 +87,33 @@ interface QueryOptions {
   endBefore?: any;
 }
 
-import { connectFirestoreEmulator } from "firebase/firestore";
-
 export class FirestoreService {
-  private static db: Firestore;
-  private static isInitialized = false;
+  // Store db as a private readonly instance variable
+  private readonly db: Firestore;
 
-  private static validatePathBasic(path: string): void {
+  /**
+   * Creates an instance of FirestoreService.
+   * @param {Firestore} db - An initialized Firestore database instance.
+   * @throws Error if db is not provided or invalid.
+   */
+  constructor(db: Firestore) {
+    if (
+      !db ||
+      typeof db !== "object" ||
+      !("type" in db) ||
+      db.type !== "firestore"
+    ) {
+      throw new Error(
+        "Valid Firestore instance is required for FirestoreService constructor"
+      );
+    }
+    this.db = db;
+    console.log("FirestoreService instance created successfully.");
+  }
+
+  // --- Path Validation Methods (can remain private static or become private instance methods) ---
+  // Let's make them instance methods for consistency, though static is also fine.
+  private validatePathBasic(path: string): void {
     if (!path) {
       throw new Error("Path cannot be empty");
     }
@@ -101,7 +122,7 @@ export class FirestoreService {
     }
   }
 
-  private static validateCollectionPathSegments(path: string): void {
+  private validateCollectionPathSegments(path: string): void {
     this.validatePathBasic(path);
     const segments = path.split("/");
     if (segments.length % 2 !== 1) {
@@ -111,7 +132,7 @@ export class FirestoreService {
     }
   }
 
-  private static validateDocumentPathSegments(path: string): void {
+  private validateDocumentPathSegments(path: string): void {
     this.validatePathBasic(path);
     const segments = path.split("/");
     if (segments.length % 2 !== 0) {
@@ -120,344 +141,350 @@ export class FirestoreService {
       );
     }
     if (segments.length < 2) {
-      // Ensure at least collection/doc
       throw new Error("Document path must have at least two segments.");
     }
   }
 
-  // Update existing validateDocumentPath to use the new segment validator
-  private static validateDocumentPath(path: string): void {
+  private validateDocumentPath(path: string): void {
     this.validateDocumentPathSegments(path);
   }
+  // --- End Path Validation ---
+
+  // --- Instance Methods (previously static, now use this.db) ---
 
   /**
-   * Initialize Firestore using an existing Firebase app instance.
-   * Note: You must initialize Firebase app yourself before calling this method.
-   * @param db - An initialized Firestore instance
-   * @throws Error if db is not provided or invalid
+   * Connects this service instance to the Firestore emulator.
+   * Note: This should ideally be done once globally if possible.
+   * @param {number} firestoreEmulatorPort - The port the emulator is running on.
    */
-  static initialize(db: Firestore) {
-    // Only initialize if not already done
-    if (this.isInitialized) {
-      // Optional: Log that it's already initialized
-      console.log("FirestoreService already initialized.");
-      return;
-    }
-
-    if (
-      !db ||
-      typeof db !== "object" ||
-      !("type" in db) ||
-      db.type !== "firestore"
-    ) {
-      throw new Error("Firestore instance is required for initialization");
-    }
-    this.db = db;
-    this.isInitialized = true;
-    console.log("FirestoreService initialized successfully");
+  connectEmulator(firestoreEmulatorPort: number): void {
+    // Note: Emulator connection is typically done once globally,
+    // but providing it as an instance method allows flexibility if needed.
+    connectFirestoreEmulator(this.db, "localhost", firestoreEmulatorPort);
+    console.log("🔥 Connected instance to Firestore Emulator");
   }
 
-  private static checkInitialized() {
-    if (!this.isInitialized || !this.db) {
-      console.error(
-        "Attempted to use FirestoreService before it was properly initialized or after HMR reset."
-      );
-      throw new Error(
-        "FirestoreService has not been initialized. Call FirestoreService.initialize(db) first."
-      );
-    }
-  }
-
-  static connectEmulator(firestoreEmulatorPort: number) {
-    connectFirestoreEmulator(
-      FirestoreService.db,
-      "localhost",
-      firestoreEmulatorPort
-    );
-    console.log("🔥 Connected to Firestore Emulator");
-  }
-
-  private static doc<T>(path: string): DocumentReference<T> {
-    this.checkInitialized();
+  // Private helpers now use this.db and are instance methods
+  private docRef<T>(path: string): DocumentReference<T> {
     this.validateDocumentPath(path);
-    return doc(this.db, path).withConverter(FirestoreDataConverter<T>());
+    return doc(this.db, path).withConverter(createFirestoreDataConverter<T>());
   }
 
-  private static collection<T>(path: string): CollectionReference<T> {
-    this.checkInitialized();
-    return collection(this.db, path).withConverter(FirestoreDataConverter<T>());
+  private colRef<T>(path: string): CollectionReference<T> {
+    // Use the imported factory function
+    return collection(this.db, path).withConverter(
+      createFirestoreDataConverter<T>()
+    );
   }
 
-  static async getDocument<T>(docPath: string): Promise<T | null> {
+  // Public API methods are now instance methods
+  /**
+   * Retrieves a single document from Firestore by its full path.
+   * @template T The expected type of the document data.
+   * @param {string} docPath The full path to the document (e.g., 'users/userId').
+   * @returns {Promise<T | null>} A promise resolving to the document data or null if not found.
+   */
+  async getDocument<T>(docPath: string): Promise<T | null> {
     RequestLimiter.logDocumentRequest(docPath);
-    const docSnap = await getDoc(this.doc<T>(docPath));
+    const docSnap = await getDoc(this.docRef<T>(docPath));
     return docSnap.exists() ? docSnap.data() : null;
   }
 
-  static async addDocument<T>(
+  /**
+   * Adds a new document to a specified collection.
+   * @template T The type of the data being added.
+   * @param {string} collectionPath The path to the collection (e.g., 'posts', 'users/userId/tasks').
+   * @param {T} data The data for the new document.
+   * @returns {Promise<string | undefined>} A promise resolving to the new document's ID, or undefined on failure.
+   */
+  async addDocument<T>(
     collectionPath: string,
     data: T
   ): Promise<string | undefined> {
-    // Perform validation *first* before any other operations
-    this.checkInitialized(); // Check initialization first is also good practice
-    this.validateCollectionPathSegments(collectionPath);
-
+    this.validateCollectionPathSegments(collectionPath); // Validate path first
     RequestLimiter.logGeneralRequest();
-    const docRef = await addDoc(this.collection<T>(collectionPath), data);
+    const docRef = await addDoc(this.colRef<T>(collectionPath), data);
     return docRef.id;
   }
 
-  static async updateDocument(
+  /**
+   * Updates specific fields of an existing document.
+   * @param {string} docPath The full path to the document.
+   * @param {Record<string, any>} data An object containing the fields to update.
+   * @returns {Promise<void>}
+   */
+  async updateDocument(
     docPath: string,
     data: Record<string, any>
   ): Promise<void> {
+    this.validateDocumentPath(docPath); // Ensure doc path is valid before update
     RequestLimiter.logGeneralRequest();
+    // Use the raw doc ref without converter for partial updates
     await updateDoc(doc(this.db, docPath), data);
   }
 
-  static async setDocument<T>(
+  /**
+   * Creates or overwrites a document completely.
+   * @template T The type of the data being set.
+   * @param {string} docPath The full path to the document.
+   * @param {T} data The data for the document.
+   * @param {object} [options] Optional settings. `merge: true` merges data instead of overwriting.
+   * @returns {Promise<void>}
+   */
+  async setDocument<T>(
     docPath: string,
     data: T,
     options: { merge?: boolean } = { merge: true }
   ): Promise<void> {
+    this.validateDocumentPath(docPath);
     RequestLimiter.logGeneralRequest();
-    await setDoc(this.doc<T>(docPath), data, options);
+    await setDoc(this.docRef<T>(docPath), data, options);
   }
 
-  static async deleteDocument(docPath: string): Promise<void> {
+  /**
+   * Deletes a document from Firestore.
+   * @param {string} docPath The full path to the document.
+   * @returns {Promise<void>}
+   */
+  async deleteDocument(docPath: string): Promise<void> {
+    this.validateDocumentPath(docPath);
     RequestLimiter.logGeneralRequest();
-    await deleteDoc(this.doc(docPath));
+    // Get the raw doc ref for deletion
+    await deleteDoc(doc(this.db, docPath));
   }
 
-  static async deleteCollection(collectionPath: string): Promise<void> {
+  /**
+   * Deletes all documents within a specified collection or subcollection.
+   * Use with caution, especially on large collections.
+   * @param {string} collectionPath The path to the collection (e.g., 'users', 'users/userId/posts').
+   * @returns {Promise<void>}
+   */
+  async deleteCollection(collectionPath: string): Promise<void> {
+    this.validateCollectionPathSegments(collectionPath);
     RequestLimiter.logGeneralRequest();
     const batch = writeBatch(this.db);
-    const snapshot = await getDocs(this.collection(collectionPath));
-    snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+    // Use colRef without converter for deletion query
+    const snapshot = await getDocs(collection(this.db, collectionPath));
+    snapshot.docs.forEach((d) => batch.delete(d.ref));
     await batch.commit();
   }
 
-  static subscribeToDocument<T>(
+  /**
+   * Subscribes to real-time updates for a single document.
+   * @template T The expected type of the document data.
+   * @param {string} docPath The full path to the document.
+   * @param {(data: T | null) => void} callback The function to call with document data (or null) on updates.
+   * @returns {() => void} A function to unsubscribe from updates.
+   */
+  subscribeToDocument<T>(
     docPath: string,
     callback: (data: T | null) => void
   ): () => void {
+    this.validateDocumentPath(docPath);
     RequestLimiter.logSubscriptionRequest(docPath);
-    const unsubscribe = onSnapshot(this.doc<T>(docPath), (docSnap) => {
+    const unsubscribe = onSnapshot(this.docRef<T>(docPath), (docSnap) => {
       callback(docSnap.exists() ? docSnap.data() : null);
     });
     return unsubscribe;
   }
 
-  static subscribeToCollection<T>(
+  /**
+   * Subscribes to real-time updates for a collection.
+   * @template T The expected type of the documents in the collection.
+   * @param {string} collectionPath The path to the collection.
+   * @param {(data: T[]) => void} callback The function to call with an array of document data on updates.
+   * @returns {() => void} A function to unsubscribe from updates.
+   */
+  subscribeToCollection<T>(
     collectionPath: string,
     callback: (data: T[]) => void
   ): () => void {
+    this.validateCollectionPathSegments(collectionPath);
     RequestLimiter.logSubscriptionRequest(collectionPath);
     const unsubscribe = onSnapshot(
-      query(this.collection<T>(collectionPath)),
+      query(this.colRef<T>(collectionPath)),
       (snapshot) => {
-        const data = snapshot.docs.map((doc) => doc.data());
+        const data = snapshot.docs.map((d) => d.data());
         callback(data);
       }
     );
     return unsubscribe;
-  }
-
-  static subscribeToCollection2<T extends FirestoreModel>(
-    model: new (data: any) => T, // ✅ Accepts a class constructor
-    collectionPath: string,
-    callback: (data: T[]) => void
-  ): () => void {
-    RequestLimiter.logSubscriptionRequest(collectionPath);
-
-    const unsubscribe = onSnapshot(
-      query(FirestoreService.collection<T>(collectionPath)),
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) =>
-          new model(doc.data()).withId(doc.id)
-        ); // ✅ Instantiate correct class
-        callback(data);
-      }
-    );
-
-    return unsubscribe;
-  }
-
-  static async fetchCollection<T>(
-    path: string,
-    ...queryConstraints: QueryConstraint[]
-  ): Promise<T[]> {
-    RequestLimiter.logCollectionFetchRequest(path);
-    const snapshot = await getDocs(
-      queryConstraints.length > 0
-        ? query(this.collection<T>(path), ...queryConstraints)
-        : this.collection<T>(path)
-    );
-    return snapshot.docs.map((doc) => doc.data());
   }
 
   /**
-   * Queries a Firestore collection with flexible options such as `where` filters, `orderBy` clauses, and `limit` constraints.
-   *
-   * @template T - The generic type representing the structure of the documents in the collection.
-   * @param {string} path - The Firestore collection path (e.g., "users", "jobs/applications").
-   * @param {QueryOptions} [options] - Optional query constraints:
-   *   - `where`: An array of conditions to filter documents. Each condition includes:
-   *       - `field`: The field to filter on (e.g., "status", "age").
-   *       - `op`: The comparison operator (e.g., "==", ">=", "<").
-   *       - `value`: The value to compare against.
-   *   - `orderBy`: An array of ordering criteria:
-   *       - `field`: The field to sort by.
-   *       - `direction`: Sort direction ("asc" for ascending or "desc" for descending, defaults to "asc").
-   *   - `limit`: Limits the number of returned documents.
-   *
-   * @returns {Promise<T[]>} A promise that resolves to an array of documents of type `T`.
-   *
-   * @example
-   * // 1️⃣ Basic Query Without Constraints
-   * const users = await FirestoreService.queryCollection<User>('users');
-   * console.log(users);
-   *
-   * @example
-   * // 2️⃣ Query with WHERE Condition
-   * const activeUsers = await FirestoreService.queryCollection<User>('users', {
-   *   where: [{ field: 'status', op: '==', value: 'active' }]
-   * });
-   * console.log(activeUsers);
-   *
-   * @example
-   * // 3️⃣ Query with ORDER BY and LIMIT
-   * const recentJobs = await FirestoreService.queryCollection<Job>('jobs', {
-   *   orderBy: [{ field: 'postedDate', direction: 'desc' }],
-   *   limit: 5
-   * });
-   * console.log(recentJobs);
-   *
-   * @example
-   * // 4️⃣ Combined WHERE, ORDER BY, and LIMIT Query
-   * const topActiveUsers = await FirestoreService.queryCollection<User>('users', {
-   *   where: [{ field: 'status', op: '==', value: 'active' }],
-   *   orderBy: [{ field: 'signupDate', direction: 'asc' }],
-   *   limit: 3
-   * });
-   * console.log(topActiveUsers);
+   * Subscribes to real-time updates for a collection, automatically instantiating FirestoreModel subclasses.
+   * @template T A type extending FirestoreModel.
+   * @param {new (...args: any[]) => T} model The constructor of the FirestoreModel subclass.
+   * @param {string} collectionPath The path to the collection.
+   * @param {(data: T[]) => void} callback The function to call with an array of instantiated models on updates.
+   * @returns {() => void} A function to unsubscribe from updates.
    */
-  static async queryCollection<T extends FirestoreModel>(
-    _model: new (...args: any[]) => T,
+  subscribeToCollection2<T extends FirestoreModel>(
+    model: new (...args: any[]) => T,
+    collectionPath: string,
+    callback: (data: T[]) => void
+  ): () => void {
+    this.validateCollectionPathSegments(collectionPath);
+    RequestLimiter.logSubscriptionRequest(collectionPath);
+
+    // Use the factory function to get the converter
+    const converter = createFirestoreDataConverter<any>(); // Use <any> or a base type for raw data
+
+    const unsubscribe = onSnapshot(
+      query(this.colRef<any>(collectionPath)).withConverter(converter),
+      (snapshot) => {
+        // Map the raw data, then instantiate the specific model class
+        const data = snapshot.docs.map((doc) => {
+          const rawData = doc.data(); // Get data converted by the converter
+          // Manually instantiate the correct model subclass
+          return new model(rawData, doc.id);
+        });
+        callback(data);
+      }
+    );
+    return unsubscribe;
+  }
+
+  /**
+   * Fetches documents from a collection, optionally applying query constraints.
+   * @template T The expected type of the documents.
+   * @param {string} path The path to the collection.
+   * @param {...QueryConstraint} queryConstraints Optional Firestore query constraints (where, orderBy, limit, etc.).
+   * @returns {Promise<T[]>} A promise resolving to an array of document data.
+   */
+  async fetchCollection<T>(
+    path: string,
+    ...queryConstraints: QueryConstraint[]
+  ): Promise<T[]> {
+    this.validateCollectionPathSegments(path);
+    RequestLimiter.logCollectionFetchRequest(path);
+    const snapshot = await getDocs(
+      queryConstraints.length > 0
+        ? query(this.colRef<T>(path), ...queryConstraints)
+        : this.colRef<T>(path)
+    );
+    return snapshot.docs.map((d) => d.data());
+  }
+
+  /**
+   * Queries a Firestore collection using a structured options object.
+   * @template T The expected type of the document data.
+   * @param {string} collectionPath The path to the collection.
+   * @param {QueryOptions} [options={}] Optional query constraints (where, orderBy, limit, startAfter, endBefore).
+   * @returns {Promise<T[]>} A promise resolving to an array of document data.
+   */
+  async queryCollection<T>(
     collectionPath: string,
     options: QueryOptions = {}
   ): Promise<T[]> {
+    this.validateCollectionPathSegments(collectionPath);
     RequestLimiter.logGeneralRequest();
-    this.checkInitialized();
 
-    const colRef = collection(this.db, collectionPath);
+    const colReference = this.colRef<T>(collectionPath);
     const constraints: QueryConstraint[] = [];
 
-    // Apply where clauses
     if (options.where) {
       options.where.forEach((w) => {
         constraints.push(where(w.field, w.op, w.value));
       });
     }
-
-    // Apply orderBy clauses
     if (options.orderBy) {
       options.orderBy.forEach((o) => {
         constraints.push(orderBy(o.field, o.direction));
       });
     }
-
-    // Apply limit
+    if (options.startAfter) {
+      constraints.push(startAfter(options.startAfter));
+    }
+    if (options.endBefore) {
+      constraints.push(endBefore(options.endBefore));
+    }
+    // Apply limit LAST as recommended by Firestore docs
     if (options.limit) {
       constraints.push(limit(options.limit));
     }
 
-    // Apply startAfter for pagination
-    if (options.startAfter) {
-      // If startAfter is a FirestoreModel instance, get its snapshot reference if needed
-      // Firestore SDK v9+ can often use the document data directly if sorted by __name__
-      // or the specific fields used in orderBy.
-      // Passing the model instance *might* work if the converter handles it,
-      // but using the underlying ID or field values is safer if not relying on __name__.
-      // For simplicity here, we'll assume direct use or that the converter handles it.
-      // A more robust implementation might require getting the DocumentSnapshot.
-      constraints.push(startAfter(options.startAfter));
-    }
-
-    // Apply endBefore for pagination
-    if (options.endBefore) {
-      constraints.push(endBefore(options.endBefore));
-    }
-
-    const q = query(colRef, ...constraints).withConverter(
-      FirestoreDataConverter<T>()
-    );
-
+    const q = query(colReference, ...constraints);
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((doc) => doc.data());
+    return snapshot.docs.map((d) => d.data());
   }
 
-  static getFieldValue() {
-    return { arrayUnion, arrayRemove };
-  }
-
-  static getTimestamp() {
-    return Timestamp.now();
-  }
-
-  static deleteField() {
-    return deleteField();
-  }
-
+  // --- Batch Operations ---
   /**
-   * Returns a new Firestore WriteBatch.
+   * Returns a new Firestore WriteBatch associated with this service instance's database.
+   * @returns {WriteBatch}
    */
-  static getBatch(): WriteBatch {
+  getBatch(): WriteBatch {
     RequestLimiter.logGeneralRequest();
     return writeBatch(this.db);
   }
 
   /**
-   * Helper for batch.update()
+   * Updates specific fields of multiple documents in a batch.
+   * @param {WriteBatch} batch The Firestore WriteBatch to update.
+   * @param {string} docPath The full path to the document.
+   * @param {object} data An object containing the fields to update.
    */
-  static updateInBatch(
+  updateInBatch(
     batch: WriteBatch,
     docPath: string,
     data: { [key: string]: FieldValue | Partial<unknown> | undefined }
   ): void {
-    const docRef = doc(this.db, docPath);
+    this.validateDocumentPath(docPath);
+    const docRef = doc(this.db, docPath); // Use raw doc ref
     batch.update(docRef, data);
   }
 
   /**
-   * Helper for batch.set()
-   * Overload with optional merge
+   * Sets a document in a batch.
+   * @template T The type of the data being set.
+   * @param {WriteBatch} batch The Firestore WriteBatch to set.
+   * @param {string} docPath The full path to the document.
+   * @param {T} data The data for the document.
+   * @param {SetOptions} [options] Optional settings. `merge: true` merges data instead of overwriting.
    */
-  static setInBatch<T>(
+  setInBatch<T>(
     batch: WriteBatch,
     docPath: string,
     data: T,
     options: SetOptions = {}
   ): void {
-    const docRef = doc(this.db, docPath).withConverter(
-      FirestoreDataConverter<T>()
-    );
+    this.validateDocumentPath(docPath);
+    // Use docRef with converter for type safety during set
+    const docRef = this.docRef<T>(docPath);
     batch.set(docRef, data, options);
   }
 
   /**
-   * Helper for batch.delete()
+   * Deletes a document in a batch.
+   * @param {WriteBatch} batch The Firestore WriteBatch to delete.
+   * @param {string} docPath The full path to the document.
    */
-  static deleteInBatch(batch: WriteBatch, docPath: string): void {
-    const docRef = doc(this.db, docPath);
+  deleteInBatch(batch: WriteBatch, docPath: string): void {
+    this.validateDocumentPath(docPath);
+    const docRef = doc(this.db, docPath); // Use raw doc ref
     batch.delete(docRef);
   }
 
-  static add(collectionPath: string, data: any): Promise<string | undefined> {
-    return addDoc(this.collection<any>(collectionPath), data).then(
-      (docRef) => docRef.id
-    );
+  // --- Static Utility Methods (Do not depend on instance state) ---
+  /**
+   * Provides access to Firestore FieldValue constants (e.g., arrayUnion, arrayRemove).
+   */
+  static getFieldValue() {
+    return { arrayUnion, arrayRemove };
+  }
+
+  /**
+   * Returns a Firestore Timestamp for the current time.
+   */
+  static getTimestamp() {
+    return Timestamp.now();
+  }
+
+  /**
+   * Returns a special value used to delete a field during an update.
+   */
+  static deleteField() {
+    return deleteField();
   }
 }
-
-export default FirestoreService;

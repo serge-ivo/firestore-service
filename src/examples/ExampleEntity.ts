@@ -1,7 +1,7 @@
 // src/models/ExampleEntity.ts
 
 import { FirestoreModel } from "../firestoreModel";
-import FirestoreService from "../firestoreService";
+// import { FirestoreService } from "../firestoreService"; // No longer needed
 
 /**
  * ✅ Represents the shape of the Firestore document data.
@@ -12,27 +12,30 @@ export type ExampleData = {
   createdAt: Date;
   updatedAt: Date;
   owner: string;
+  // Note: ID is handled by FirestoreModel base class and converter, not explicitly defined here.
 };
 
 /**
- * ✅ ExampleEntity extends FirestoreModel, gaining 'update', 'delete', etc.
+ * ✅ ExampleEntity: Data representation + Path logic.
+ * Persistence is handled by FirestoreService.
  */
 export class ExampleEntity extends FirestoreModel {
-  title: string;
-  description: string;
-  createdAt: Date;
-  updatedAt: Date;
-  owner: string;
+  // Properties will be assigned by the base constructor via Object.assign
+  // We declare them here for type safety.
+  title!: string; // Add '!' to assert assignment by constructor
+  description!: string;
+  createdAt!: Date;
+  updatedAt!: Date;
+  owner!: string;
 
-  constructor(data: Partial<ExampleData> = {}, id?: string) {
-    super(id);
+  // Constructor accepts data (potentially with id) and passes to super
+  constructor(data: { id?: string } & Partial<ExampleData>) {
+    super(data); // Pass the whole data object (including potential id) up
 
-    // Initialize fields safely (handle partial data)
-    this.title = data.title ?? "";
-    this.description = data.description ?? "";
-    this.createdAt = data.createdAt ?? new Date();
-    this.updatedAt = data.updatedAt ?? new Date();
-    this.owner = data.owner ?? "";
+    // No need for manual assignment here if super() handles it via Object.assign
+    // Ensure base class constructor logic is sufficient.
+    // If defaults are needed for properties NOT in ExampleData, assign them here:
+    // this.someOtherProp = data.someOtherProp ?? defaultValue;
   }
 
   /**
@@ -47,9 +50,7 @@ export class ExampleEntity extends FirestoreModel {
    */
   getDocPath(): string {
     if (!this.id) {
-      throw new Error(
-        "Cannot get document path: entity has no Firestore ID yet."
-      );
+      throw new Error("Cannot get document path: entity has no Firestore ID.");
     }
     return ExampleEntity.buildPath(this.id);
   }
@@ -61,13 +62,5 @@ export class ExampleEntity extends FirestoreModel {
     return ExampleEntity.buildPath();
   }
 
-  /**
-   * ✅ Retrieve an ExampleEntity by ID directly (alternative to FirestoreModel.get()).
-   */
-  static async getById(id: string): Promise<ExampleEntity | null> {
-    const docData = await FirestoreService.getDocument<ExampleData>(
-      ExampleEntity.buildPath(id)
-    );
-    return docData ? new ExampleEntity(docData, id) : null;
-  }
+  // Static getById method was already removed
 }
