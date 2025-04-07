@@ -186,6 +186,11 @@ Types are organized into categories in `src/types/index.ts`:
 
 ```typescript
 import { initializeApp } from "firebase/app";
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from "firebase/firestore";
 import { FirestoreService } from "@serge-ivo/firestore-client";
 
 // Initialize Firebase app with your config
@@ -196,9 +201,30 @@ const app = initializeApp({
   // ... other Firebase config options
 });
 
+// Initialize Firestore with persistent caching enabled
+const firestore = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager(),
+  }),
+});
+
 // Initialize Firestore service with your Firebase app
-FirestoreService.initialize(app);
+FirestoreService.initialize(firestore);
 ```
+
+This initialization code includes:
+
+1. The necessary imports for the caching functionality
+2. Initialization of Firestore with persistent local cache
+3. Support for multiple tab management
+4. Proper initialization of the FirestoreService with the configured Firestore instance
+
+The persistent cache configuration will help improve your application's performance by:
+
+- Enabling offline data persistence
+- Allowing data sharing between multiple tabs
+- Reducing unnecessary network requests
+- Providing a better user experience with faster data access
 
 ### Basic Operations
 
