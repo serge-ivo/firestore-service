@@ -1,4 +1,4 @@
-import { arrayRemove, arrayUnion, Firestore, QueryConstraint, SetOptions, Timestamp, WriteBatch, FieldValue } from "firebase/firestore";
+import { arrayRemove, arrayUnion, FieldValue, Firestore, QueryConstraint, SetOptions, Timestamp, WriteBatch } from "firebase/firestore";
 import { FirestoreModel } from "./firestoreModel";
 export type FilterOperator = "==" | "!=" | "<" | "<=" | ">" | ">=" | "array-contains" | "in" | "array-contains-any" | "not-in";
 interface QueryOptions {

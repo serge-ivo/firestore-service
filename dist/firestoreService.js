@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FirestoreService = void 0;
+// src/services/FirestoreService.ts
 const firestore_1 = require("firebase/firestore");
 const FirestoreDataConverter_1 = __importDefault(require("./FirestoreDataConverter"));
 const RequestLimiter_1 = __importDefault(require("./RequestLimiter"));
