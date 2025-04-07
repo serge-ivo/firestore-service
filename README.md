@@ -60,25 +60,26 @@ yarn add @serge-ivo/firestore-client firebase
     import { firestoreService } from "../firestore"; // Adjust path as needed
     import { useEffect, useState } from "react";
 
-    interface User {
-      id?: string;
+    interface UserData {
+      // Use an interface for the data shape
       name: string;
       email: string;
     }
 
     function UserProfile({ userId }: { userId: string }) {
-      const [user, setUser] = useState<User | null>(null);
+      // State holds the plain data object (or null)
+      const [user, setUser] = useState<UserData | null>(null);
       const [loading, setLoading] = useState(true);
 
       useEffect(() => {
         const fetchUser = async () => {
           setLoading(true);
           try {
-            // Use the service instance methods
-            const userData = await firestoreService.getDocument<User>(
-              `users/${userId}`
+            // Use the service instance methods, specifying the expected data type
+            const userData = await firestoreService.getDocument<UserData>(
+              `users/${userId}` // Construct path manually or use a model/helper
             );
-            setUser(userData);
+            setUser(userData); // The fetched data (with ID added by converter) is stored
           } catch (error) {
             console.error("Failed to fetch user:", error);
           }
@@ -94,6 +95,7 @@ yarn add @serge-ivo/firestore-client firebase
         <div>
           <h1>{user.name}</h1>
           <p>{user.email}</p>
+          {/* If user object had id: <p>ID: {user.id}</p> */}
         </div>
       );
     }
@@ -188,9 +190,105 @@ static getTimestamp(): Timestamp
 static deleteField(): FieldValue
 ```
 
-## FirestoreModel Base Class (Optional)
+## FirestoreModel Base Class (Simplified)
 
-The library includes an optional `FirestoreModel` base class (`src/firestoreModel.ts`) that you can extend to add methods like `save()`, `update()`, `delete()` directly to your data model objects. See the source file and `ExampleEntity.ts` for usage.
+The library includes a base class `FirestoreModel` (`src/firestoreModel.ts`) that can be extended. In the current design, its primary purpose is:
+
+1.  **Defining Data Structure:** Child classes define the properties of your entity.
+2.  **Encapsulating Path Logic:** Child classes **must** implement `getDocPath()` and `getColPath()` to define how Firestore paths are constructed for that entity type.
+
+Models **do not** handle persistence directly (no `save`, `update`, `delete` methods). All persistence operations are performed using the `firestoreService` instance.
+
+**Example Definition:**
+
+```typescript
+// src/models/ExampleEntity.ts
+import { FirestoreModel } from "@serge-ivo/firestore-client";
+
+// Interface for the raw data shape
+export interface ExampleData {
+  title: string;
+  description: string;
+  owner: string;
+  // Timestamps (createdAt, updatedAt) can be handled by Firestore
+  // ID is handled automatically by the service/converter and base class
+}
+
+export class ExampleEntity extends FirestoreModel {
+  // Declare properties for type safety
+  title!: string;
+  description!: string;
+  owner!: string;
+  createdAt!: Date; // Assuming converter handles Timestamp -> Date
+  updatedAt!: Date;
+
+  // Constructor accepts the data object (including optional id from converter)
+  constructor(data: { id?: string } & Partial<ExampleData>) {
+    super(data); // Passes data up to base class (which assigns properties)
+  }
+
+  // --- Path Logic Implementation ---
+  static buildPath(id?: string): string {
+    return id ? `examples/${id}` : `examples`;
+  }
+
+  getDocPath(): string {
+    if (!this.id) throw new Error("Cannot get doc path without ID.");
+    return ExampleEntity.buildPath(this.id);
+  }
+
+  getColPath(): string {
+    return ExampleEntity.buildPath();
+  }
+}
+```
+
+**Example Usage with Service:**
+
+```typescript
+import { firestoreService } from "../firestore";
+import { ExampleEntity, ExampleData } from "../models/ExampleEntity";
+
+async function workWithExamples() {
+  // 1. Create data using the service
+  const newData: ExampleData = {
+    title: "New Example",
+    description: "Desc",
+    owner: "me",
+  };
+  const newId = await firestoreService.addDocument<ExampleData>(
+    ExampleEntity.buildPath(), // Use static path builder for collection
+    newData
+  );
+  if (!newId) return;
+  console.log("Created document with ID:", newId);
+
+  // 2. Fetch data using the service
+  const fetchedData = await firestoreService.getDocument<
+    ExampleData & { id: string }
+  >(
+    ExampleEntity.buildPath(newId) // Use static path builder for document
+  );
+
+  if (fetchedData) {
+    // 3. Optionally instantiate the model if needed for path logic or other methods
+    const exampleInstance = new ExampleEntity(fetchedData);
+
+    console.log("Fetched Title:", exampleInstance.title);
+    console.log("Instance ID:", exampleInstance.id);
+    console.log("Document Path:", exampleInstance.getDocPath());
+
+    // 4. Update using the service, providing the path and partial data
+    await firestoreService.updateDocument(exampleInstance.getDocPath(), {
+      description: "Updated Description",
+    });
+
+    // 5. Delete using the service, providing the path
+    await firestoreService.deleteDocument(exampleInstance.getDocPath());
+    console.log("Document deleted.");
+  }
+}
+```
 
 ## Request Limiter (Optional)
 

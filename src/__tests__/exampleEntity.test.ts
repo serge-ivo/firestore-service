@@ -103,4 +103,32 @@ describe("🔥 FirestoreService - ExampleEntity Interaction Tests", () => {
     );
     expect(fetchedDoc).toBeNull();
   });
+
+  it("should instantiate correctly without an ID", () => {
+    const dataWithoutId: ExampleData = {
+      title: "Pre-Save Title",
+      description: "Desc before saving",
+      owner: "temp-owner",
+      createdAt: new Date(), // These might be set client-side or server-side
+      updatedAt: new Date(),
+    };
+
+    // Instantiate using only the data (no id)
+    const entity = new ExampleEntity(dataWithoutId);
+
+    // Verify properties are set
+    expect(entity.title).toBe(dataWithoutId.title);
+    expect(entity.owner).toBe(dataWithoutId.owner);
+
+    // Verify ID is undefined as expected
+    expect(entity.id).toBeUndefined();
+
+    // Verify path methods that require ID throw an error
+    expect(() => entity.getDocPath()).toThrow(
+      "Cannot get doc path without ID."
+    );
+    // getColPath should still work as it doesn't depend on the instance ID
+    expect(() => entity.getColPath()).not.toThrow();
+    expect(entity.getColPath()).toBe(testCollectionPath);
+  });
 });
