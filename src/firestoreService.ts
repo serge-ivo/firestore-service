@@ -140,7 +140,7 @@ export class FirestoreService {
     // Only initialize if not already done
     if (this.isInitialized) {
       // Optional: Log that it's already initialized
-      // console.log("FirestoreService already initialized.");
+      console.log("FirestoreService already initialized.");
       return;
     }
 
