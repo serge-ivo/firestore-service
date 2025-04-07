@@ -42,6 +42,7 @@ import {
   deleteField,
   doc,
   DocumentReference,
+  endBefore,
   FieldValue,
   Firestore,
   getDoc,
@@ -53,13 +54,12 @@ import {
   QueryConstraint,
   setDoc,
   SetOptions,
+  startAfter,
   Timestamp,
   updateDoc,
   where,
   WriteBatch,
   writeBatch,
-  startAfter,
-  endBefore,
 } from "firebase/firestore";
 
 import FirestoreDataConverter from "./FirestoreDataConverter";
@@ -333,7 +333,7 @@ export class FirestoreService {
    * console.log(topActiveUsers);
    */
   static async queryCollection<T extends FirestoreModel>(
-    model: new (...args: any[]) => T,
+    _model: new (...args: any[]) => T,
     collectionPath: string,
     options: QueryOptions = {}
   ): Promise<T[]> {
