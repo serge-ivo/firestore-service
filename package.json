@@ -1,6 +1,6 @@
 {
   "name": "@serge-ivo/firestore-client",
-  "version": "1.3.5",
+  "version": "1.3.6",
   "description": "A Firestore data management module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -39,10 +39,12 @@
   ],
   "author": "Serge Ivo",
   "license": "MIT",
-  "dependencies": {
+  "dependencies": {},
+  "peerDependencies": {
     "firebase": "^11.6.0"
   },
   "devDependencies": {
+    "firebase": "^11.6.0",
     "@babel/core": "^7.26.9",
     "@babel/preset-env": "^7.26.9",
     "@babel/preset-typescript": "^7.26.0",
