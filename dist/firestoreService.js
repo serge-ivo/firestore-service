@@ -1,13 +1,36 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
+/**
+ * FirestoreService - A wrapper around Firebase Firestore providing type-safe operations
+ *
+ * @example
+ * // 1️⃣ Basic Setup
+ * import { getFirestore } from 'firebase/firestore';
+ * import { FirestoreService } from '@serge-ivo/firestore-client';
+ *
+ * // Initialize Firebase app first
+ * const app = initializeApp(firebaseConfig);
+ * const db = getFirestore(app);
+ *
+ * // Initialize FirestoreService
+ * FirestoreService.initialize(db);
+ *
+ * @example
+ * // 2️⃣ Using the Service
+ * // After initialization, you can use any of the service methods
+ * const doc = await FirestoreService.getDocument<User>('users/user123');
+ *
+ * @example
+ * // 3️⃣ Common Error Cases
+ * // ❌ Don't use before initialization
+ * FirestoreService.getDocument('users/user123'); // Throws error
+ *
+ * // ❌ Don't initialize with invalid Firestore instance
+ * FirestoreService.initialize(null); // Throws error
+ *
+ * // ✅ Correct usage
+ * FirestoreService.initialize(db);
+ * const result = await FirestoreService.getDocument('users/user123');
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -19,69 +42,102 @@ const FirestoreDataConverter_1 = __importDefault(require("./FirestoreDataConvert
 const RequestLimiter_1 = __importDefault(require("./RequestLimiter"));
 const firestore_2 = require("firebase/firestore");
 class FirestoreService {
+    static validatePathBasic(path) {
+        if (!path) {
+            throw new Error("Path cannot be empty");
+        }
+        if (path.startsWith("/") || path.endsWith("/")) {
+            throw new Error("Path cannot start or end with '/'");
+        }
+    }
+    static validateCollectionPathSegments(path) {
+        this.validatePathBasic(path);
+        const segments = path.split("/");
+        if (segments.length % 2 !== 1) {
+            throw new Error("Collection path must have an odd number of segments (e.g., 'users' or 'users/123/posts')");
+        }
+    }
+    static validateDocumentPathSegments(path) {
+        this.validatePathBasic(path);
+        const segments = path.split("/");
+        if (segments.length % 2 !== 0) {
+            throw new Error("Document path must have an even number of segments (e.g., 'users/123' or 'users/123/posts/456')");
+        }
+        if (segments.length < 2) {
+            // Ensure at least collection/doc
+            throw new Error("Document path must have at least two segments.");
+        }
+    }
+    // Update existing validateDocumentPath to use the new segment validator
+    static validateDocumentPath(path) {
+        this.validateDocumentPathSegments(path);
+    }
     /**
      * Initialize Firestore using an existing Firebase app instance.
      * Note: You must initialize Firebase app yourself before calling this method.
-     * @param app - An initialized Firebase app instance
+     * @param db - An initialized Firestore instance
+     * @throws Error if db is not provided or invalid
      */
     static initialize(db) {
+        if (!db ||
+            typeof db !== "object" ||
+            !("type" in db) ||
+            db.type !== "firestore") {
+            throw new Error("Firestore instance is required for initialization");
+        }
         this.db = db;
+        this.isInitialized = true;
+        console.log("FirestoreService initialized successfully");
+    }
+    static checkInitialized() {
+        if (!this.isInitialized) {
+            throw new Error("FirestoreService has not been initialized. Call FirestoreService.initialize(db) first.");
+        }
     }
     static connectEmulator(firestoreEmulatorPort) {
         (0, firestore_2.connectFirestoreEmulator)(FirestoreService.db, "localhost", firestoreEmulatorPort);
         console.log("🔥 Connected to Firestore Emulator");
     }
     static doc(path) {
+        this.checkInitialized();
+        this.validateDocumentPath(path);
         return (0, firestore_1.doc)(this.db, path).withConverter((0, FirestoreDataConverter_1.default)());
     }
     static collection(path) {
+        this.checkInitialized();
         return (0, firestore_1.collection)(this.db, path).withConverter((0, FirestoreDataConverter_1.default)());
     }
-    static getDocument(docPath) {
-        return __awaiter(this, void 0, void 0, function* () {
-            RequestLimiter_1.default.logDocumentRequest(docPath);
-            const docSnap = yield (0, firestore_1.getDoc)(this.doc(docPath));
-            return docSnap.exists() ? docSnap.data() : null;
-        });
+    static async getDocument(docPath) {
+        RequestLimiter_1.default.logDocumentRequest(docPath);
+        const docSnap = await (0, firestore_1.getDoc)(this.doc(docPath));
+        return docSnap.exists() ? docSnap.data() : null;
     }
-    static addDocument(collectionPath, data) {
-        return __awaiter(this, void 0, void 0, function* () {
-            RequestLimiter_1.default.logGeneralRequest();
-            console.log(collectionPath);
-            console.log("collection:");
-            console.log(this.collection(collectionPath).toString());
-            console.log("typeof collection:");
-            console.log(typeof this.collection(collectionPath));
-            const docRef = yield (0, firestore_1.addDoc)(this.collection(collectionPath), data);
-            return docRef.id;
-        });
+    static async addDocument(collectionPath, data) {
+        // Perform validation *first* before any other operations
+        this.checkInitialized(); // Check initialization first is also good practice
+        this.validateCollectionPathSegments(collectionPath);
+        RequestLimiter_1.default.logGeneralRequest();
+        const docRef = await (0, firestore_1.addDoc)(this.collection(collectionPath), data);
+        return docRef.id;
     }
-    static updateDocument(docPath, data) {
-        return __awaiter(this, void 0, void 0, function* () {
-            RequestLimiter_1.default.logGeneralRequest();
-            yield (0, firestore_1.updateDoc)((0, firestore_1.doc)(this.db, docPath), data);
-        });
+    static async updateDocument(docPath, data) {
+        RequestLimiter_1.default.logGeneralRequest();
+        await (0, firestore_1.updateDoc)((0, firestore_1.doc)(this.db, docPath), data);
     }
-    static setDocument(docPath_1, data_1) {
-        return __awaiter(this, arguments, void 0, function* (docPath, data, options = { merge: true }) {
-            RequestLimiter_1.default.logGeneralRequest();
-            yield (0, firestore_1.setDoc)(this.doc(docPath), data, options);
-        });
+    static async setDocument(docPath, data, options = { merge: true }) {
+        RequestLimiter_1.default.logGeneralRequest();
+        await (0, firestore_1.setDoc)(this.doc(docPath), data, options);
     }
-    static deleteDocument(docPath) {
-        return __awaiter(this, void 0, void 0, function* () {
-            RequestLimiter_1.default.logGeneralRequest();
-            yield (0, firestore_1.deleteDoc)(this.doc(docPath));
-        });
+    static async deleteDocument(docPath) {
+        RequestLimiter_1.default.logGeneralRequest();
+        await (0, firestore_1.deleteDoc)(this.doc(docPath));
     }
-    static deleteCollection(collectionPath) {
-        return __awaiter(this, void 0, void 0, function* () {
-            RequestLimiter_1.default.logGeneralRequest();
-            const batch = (0, firestore_1.writeBatch)(this.db);
-            const snapshot = yield (0, firestore_1.getDocs)(this.collection(collectionPath));
-            snapshot.docs.forEach((doc) => batch.delete(doc.ref));
-            yield batch.commit();
-        });
+    static async deleteCollection(collectionPath) {
+        RequestLimiter_1.default.logGeneralRequest();
+        const batch = (0, firestore_1.writeBatch)(this.db);
+        const snapshot = await (0, firestore_1.getDocs)(this.collection(collectionPath));
+        snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+        await batch.commit();
     }
     static subscribeToDocument(docPath, callback) {
         RequestLimiter_1.default.logSubscriptionRequest(docPath);
@@ -107,14 +163,12 @@ class FirestoreService {
         });
         return unsubscribe;
     }
-    static fetchCollection(path, ...queryConstraints) {
-        return __awaiter(this, void 0, void 0, function* () {
-            RequestLimiter_1.default.logCollectionFetchRequest(path);
-            const snapshot = yield (0, firestore_1.getDocs)(queryConstraints.length > 0
-                ? (0, firestore_1.query)(this.collection(path), ...queryConstraints)
-                : this.collection(path));
-            return snapshot.docs.map((doc) => doc.data());
-        });
+    static async fetchCollection(path, ...queryConstraints) {
+        RequestLimiter_1.default.logCollectionFetchRequest(path);
+        const snapshot = await (0, firestore_1.getDocs)(queryConstraints.length > 0
+            ? (0, firestore_1.query)(this.collection(path), ...queryConstraints)
+            : this.collection(path));
+        return snapshot.docs.map((doc) => doc.data());
     }
     /**
      * Queries a Firestore collection with flexible options such as `where` filters, `orderBy` clauses, and `limit` constraints.
@@ -162,31 +216,45 @@ class FirestoreService {
      * });
      * console.log(topActiveUsers);
      */
-    static queryCollection(model, path, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const constraints = [];
-            // Handle WHERE clauses
-            if (options === null || options === void 0 ? void 0 : options.where) {
-                options.where.forEach((condition) => {
-                    constraints.push((0, firestore_1.where)(condition.field, condition.op, condition.value));
-                });
-            }
-            // Handle ORDER BY clauses
-            if (options === null || options === void 0 ? void 0 : options.orderBy) {
-                options.orderBy.forEach((order) => {
-                    constraints.push((0, firestore_1.orderBy)(order.field, order.direction || "asc"));
-                });
-            }
-            // Handle LIMIT
-            if (options === null || options === void 0 ? void 0 : options.limit) {
-                constraints.push((0, firestore_1.limit)(options.limit));
-            }
-            const q = constraints.length > 0
-                ? (0, firestore_1.query)(this.collection(path), ...constraints)
-                : this.collection(path);
-            const snapshot = yield (0, firestore_1.getDocs)(q);
-            return snapshot.docs.map((doc) => new model(doc.data(), doc.id));
-        });
+    static async queryCollection(_model, collectionPath, options = {}) {
+        RequestLimiter_1.default.logGeneralRequest();
+        this.checkInitialized();
+        const colRef = (0, firestore_1.collection)(this.db, collectionPath);
+        const constraints = [];
+        // Apply where clauses
+        if (options.where) {
+            options.where.forEach((w) => {
+                constraints.push((0, firestore_1.where)(w.field, w.op, w.value));
+            });
+        }
+        // Apply orderBy clauses
+        if (options.orderBy) {
+            options.orderBy.forEach((o) => {
+                constraints.push((0, firestore_1.orderBy)(o.field, o.direction));
+            });
+        }
+        // Apply limit
+        if (options.limit) {
+            constraints.push((0, firestore_1.limit)(options.limit));
+        }
+        // Apply startAfter for pagination
+        if (options.startAfter) {
+            // If startAfter is a FirestoreModel instance, get its snapshot reference if needed
+            // Firestore SDK v9+ can often use the document data directly if sorted by __name__
+            // or the specific fields used in orderBy.
+            // Passing the model instance *might* work if the converter handles it,
+            // but using the underlying ID or field values is safer if not relying on __name__.
+            // For simplicity here, we'll assume direct use or that the converter handles it.
+            // A more robust implementation might require getting the DocumentSnapshot.
+            constraints.push((0, firestore_1.startAfter)(options.startAfter));
+        }
+        // Apply endBefore for pagination
+        if (options.endBefore) {
+            constraints.push((0, firestore_1.endBefore)(options.endBefore));
+        }
+        const q = (0, firestore_1.query)(colRef, ...constraints).withConverter((0, FirestoreDataConverter_1.default)());
+        const snapshot = await (0, firestore_1.getDocs)(q);
+        return snapshot.docs.map((doc) => doc.data());
     }
     static getFieldValue() {
         return { arrayUnion: firestore_1.arrayUnion, arrayRemove: firestore_1.arrayRemove };
@@ -231,5 +299,5 @@ class FirestoreService {
     }
 }
 exports.FirestoreService = FirestoreService;
+FirestoreService.isInitialized = false;
 exports.default = FirestoreService;
-//# sourceMappingURL=firestoreService.js.map

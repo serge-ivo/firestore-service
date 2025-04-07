@@ -1,3 +1,35 @@
+/**
+ * FirestoreService - A wrapper around Firebase Firestore providing type-safe operations
+ *
+ * @example
+ * // 1️⃣ Basic Setup
+ * import { getFirestore } from 'firebase/firestore';
+ * import { FirestoreService } from '@serge-ivo/firestore-client';
+ *
+ * // Initialize Firebase app first
+ * const app = initializeApp(firebaseConfig);
+ * const db = getFirestore(app);
+ *
+ * // Initialize FirestoreService
+ * FirestoreService.initialize(db);
+ *
+ * @example
+ * // 2️⃣ Using the Service
+ * // After initialization, you can use any of the service methods
+ * const doc = await FirestoreService.getDocument<User>('users/user123');
+ *
+ * @example
+ * // 3️⃣ Common Error Cases
+ * // ❌ Don't use before initialization
+ * FirestoreService.getDocument('users/user123'); // Throws error
+ *
+ * // ❌ Don't initialize with invalid Firestore instance
+ * FirestoreService.initialize(null); // Throws error
+ *
+ * // ✅ Correct usage
+ * FirestoreService.initialize(db);
+ * const result = await FirestoreService.getDocument('users/user123');
+ */
 import { arrayRemove, arrayUnion, FieldValue, Firestore, QueryConstraint, SetOptions, Timestamp, WriteBatch } from "firebase/firestore";
 import { FirestoreModel } from "./firestoreModel";
 export type FilterOperator = "==" | "!=" | "<" | "<=" | ">" | ">=" | "array-contains" | "in" | "array-contains-any" | "not-in";
@@ -12,15 +44,24 @@ interface QueryOptions {
         direction?: "asc" | "desc";
     }>;
     limit?: number;
+    startAfter?: any;
+    endBefore?: any;
 }
 export declare class FirestoreService {
     private static db;
+    private static isInitialized;
+    private static validatePathBasic;
+    private static validateCollectionPathSegments;
+    private static validateDocumentPathSegments;
+    private static validateDocumentPath;
     /**
      * Initialize Firestore using an existing Firebase app instance.
      * Note: You must initialize Firebase app yourself before calling this method.
-     * @param app - An initialized Firebase app instance
+     * @param db - An initialized Firestore instance
+     * @throws Error if db is not provided or invalid
      */
     static initialize(db: Firestore): void;
+    private static checkInitialized;
     static connectEmulator(firestoreEmulatorPort: number): void;
     private static doc;
     private static collection;
@@ -83,7 +124,7 @@ export declare class FirestoreService {
      * });
      * console.log(topActiveUsers);
      */
-    static queryCollection<T>(model: new (data: any, id?: string) => T, path: string, options?: QueryOptions): Promise<T[]>;
+    static queryCollection<T extends FirestoreModel>(_model: new (...args: any[]) => T, collectionPath: string, options?: QueryOptions): Promise<T[]>;
     static getFieldValue(): {
         arrayUnion: typeof arrayUnion;
         arrayRemove: typeof arrayRemove;

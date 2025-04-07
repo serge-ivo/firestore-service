@@ -41,8 +41,7 @@ const createFirestoreDataConverter = () => ({
             return obj;
         };
         const data = snapshot.data(options);
-        return Object.assign(Object.assign({}, transformTimestamps(data)), { id: snapshot.id });
+        return { ...transformTimestamps(data), id: snapshot.id };
     }
 });
 exports.default = createFirestoreDataConverter;
-//# sourceMappingURL=FirestoreDataConverter.js.map

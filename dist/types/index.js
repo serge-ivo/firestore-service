@@ -12,4 +12,3 @@ class FirestoreError extends Error {
     }
 }
 exports.FirestoreError = FirestoreError;
-//# sourceMappingURL=index.js.map

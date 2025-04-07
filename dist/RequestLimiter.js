@@ -42,4 +42,3 @@ RequestLimiter.maxDocumentRequestsPerMinute = 30;
 RequestLimiter.maxSubscriptionRequestsPerMinute = 30;
 RequestLimiter.maxCollectionFetchRequestsPerMinute = 20;
 exports.default = RequestLimiter;
-//# sourceMappingURL=RequestLimiter.js.map
