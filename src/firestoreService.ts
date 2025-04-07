@@ -1,5 +1,4 @@
 // src/services/FirestoreService.ts
-import { FirebaseApp } from "firebase/app";
 import {
   addDoc,
   arrayRemove,
@@ -10,15 +9,13 @@ import {
   deleteField,
   doc,
   DocumentReference,
+  FieldValue,
   Firestore,
   getDoc,
   getDocs,
-  initializeFirestore,
   limit,
   onSnapshot,
   orderBy,
-  persistentLocalCache,
-  persistentMultipleTabManager,
   query,
   QueryConstraint,
   setDoc,
@@ -28,7 +25,6 @@ import {
   where,
   WriteBatch,
   writeBatch,
-  FieldValue,
 } from "firebase/firestore";
 
 import FirestoreDataConverter from "./FirestoreDataConverter";
