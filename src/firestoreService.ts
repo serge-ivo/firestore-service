@@ -158,7 +158,10 @@ export class FirestoreService {
   }
 
   private static checkInitialized() {
-    if (!this.isInitialized) {
+    if (!this.isInitialized || !this.db) {
+      console.error(
+        "Attempted to use FirestoreService before it was properly initialized or after HMR reset."
+      );
       throw new Error(
         "FirestoreService has not been initialized. Call FirestoreService.initialize(db) first."
       );
