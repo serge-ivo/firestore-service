@@ -3,14 +3,17 @@ import { FirestoreModel } from "../firestoreModel";
  * ✅ Represents the shape of the Firestore document data.
  */
 export type ExampleData = {
+    id?: string;
     title: string;
     description: string;
     createdAt: Date;
     updatedAt: Date;
     owner: string;
+    tags?: string[];
 };
 /**
- * ✅ ExampleEntity extends FirestoreModel, gaining 'update', 'delete', etc.
+ * ✅ ExampleEntity: Data representation + Path logic.
+ * Persistence is handled by FirestoreService.
  */
 export declare class ExampleEntity extends FirestoreModel {
     title: string;
@@ -18,7 +21,9 @@ export declare class ExampleEntity extends FirestoreModel {
     createdAt: Date;
     updatedAt: Date;
     owner: string;
-    constructor(data?: Partial<ExampleData>, id?: string);
+    constructor(data: {
+        id?: string;
+    } & Partial<ExampleData>);
     /**
      * ✅ Build Firestore path. If 'id' is provided, returns document path; else collection path.
      */
@@ -31,8 +36,4 @@ export declare class ExampleEntity extends FirestoreModel {
      * ✅ For FirestoreModel's abstract method: collection path for this model.
      */
     getColPath(): string;
-    /**
-     * ✅ Retrieve an ExampleEntity by ID directly (alternative to FirestoreModel.get()).
-     */
-    static getById(id: string): Promise<ExampleEntity | null>;
 }

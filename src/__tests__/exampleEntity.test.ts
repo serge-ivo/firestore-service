@@ -125,7 +125,7 @@ describe("🔥 FirestoreService - ExampleEntity Interaction Tests", () => {
 
     // Verify path methods that require ID throw an error
     expect(() => entity.getDocPath()).toThrow(
-      "Cannot get doc path without ID."
+      "Cannot get document path: entity has no Firestore ID."
     );
     // getColPath should still work as it doesn't depend on the instance ID
     expect(() => entity.getColPath()).not.toThrow();

@@ -7,11 +7,13 @@ import { FirestoreModel } from "../firestoreModel";
  * ✅ Represents the shape of the Firestore document data.
  */
 export type ExampleData = {
+  id?: string; // Add optional id field
   title: string;
   description: string;
   createdAt: Date;
   updatedAt: Date;
   owner: string;
+  tags?: string[]; // Add optional tags field for the example
   // Note: ID is handled by FirestoreModel base class and converter, not explicitly defined here.
 };
 

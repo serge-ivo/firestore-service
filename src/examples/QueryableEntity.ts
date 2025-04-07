@@ -1,8 +1,4 @@
-// src/models/QueryableEntity.ts
-
 import { FirestoreModel } from "../firestoreModel";
-// import { FirestoreService } from "../firestoreService"; // No longer needed
-import type { FilterOperator } from "../firestoreService"; // Keep type import for external use if needed
 
 export interface QueryableEntityData {
   userId: string;

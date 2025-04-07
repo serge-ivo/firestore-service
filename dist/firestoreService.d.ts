@@ -1,8 +1,10 @@
 /**
- * FirestoreService - A wrapper around Firebase Firestore providing type-safe operations
+ * FirestoreService - A wrapper around Firebase Firestore providing type-safe operations.
+ * This service needs to be instantiated with a Firestore database instance.
  *
  * @example
  * // 1️⃣ Basic Setup
+ * import { initializeApp } from 'firebase/app';
  * import { getFirestore } from 'firebase/firestore';
  * import { FirestoreService } from '@serge-ivo/firestore-client';
  *
@@ -10,25 +12,22 @@
  * const app = initializeApp(firebaseConfig);
  * const db = getFirestore(app);
  *
- * // Initialize FirestoreService
- * FirestoreService.initialize(db);
+ * // Create an instance of FirestoreService
+ * const firestoreService = new FirestoreService(db);
  *
  * @example
- * // 2️⃣ Using the Service
- * // After initialization, you can use any of the service methods
- * const doc = await FirestoreService.getDocument<User>('users/user123');
+ * // 2️⃣ Using the Service Instance
+ * // Use the created instance to call methods
+ * const user = await firestoreService.getDocument<User>('users/user123');
  *
  * @example
  * // 3️⃣ Common Error Cases
- * // ❌ Don't use before initialization
- * FirestoreService.getDocument('users/user123'); // Throws error
+ * // ❌ Don't instantiate without a valid Firestore instance
+ * // const invalidService = new FirestoreService(null); // Throws error
  *
- * // ❌ Don't initialize with invalid Firestore instance
- * FirestoreService.initialize(null); // Throws error
- *
- * // ✅ Correct usage
- * FirestoreService.initialize(db);
- * const result = await FirestoreService.getDocument('users/user123');
+ * // ✅ Correct usage:
+ * const firestoreService = new FirestoreService(db);
+ * const result = await firestoreService.getDocument('users/user123');
  */
 import { arrayRemove, arrayUnion, FieldValue, Firestore, QueryConstraint, SetOptions, Timestamp, WriteBatch } from "firebase/firestore";
 import { FirestoreModel } from "./firestoreModel";
@@ -48,108 +47,155 @@ interface QueryOptions {
     endBefore?: any;
 }
 export declare class FirestoreService {
-    private static db;
-    private static isInitialized;
-    private static validatePathBasic;
-    private static validateCollectionPathSegments;
-    private static validateDocumentPathSegments;
-    private static validateDocumentPath;
+    private readonly db;
     /**
-     * Initialize Firestore using an existing Firebase app instance.
-     * Note: You must initialize Firebase app yourself before calling this method.
-     * @param db - An initialized Firestore instance
-     * @throws Error if db is not provided or invalid
+     * Creates an instance of FirestoreService.
+     * @param {Firestore} db - An initialized Firestore database instance.
+     * @throws Error if db is not provided or invalid.
      */
-    static initialize(db: Firestore): void;
-    private static checkInitialized;
-    static connectEmulator(firestoreEmulatorPort: number): void;
-    private static doc;
-    private static collection;
-    static getDocument<T>(docPath: string): Promise<T | null>;
-    static addDocument<T>(collectionPath: string, data: T): Promise<string | undefined>;
-    static updateDocument(docPath: string, data: Record<string, any>): Promise<void>;
-    static setDocument<T>(docPath: string, data: T, options?: {
+    constructor(db: Firestore);
+    private validatePathBasic;
+    private validateCollectionPathSegments;
+    private validateDocumentPathSegments;
+    private validateDocumentPath;
+    /**
+     * Connects this service instance to the Firestore emulator.
+     * Note: This should ideally be done once globally if possible.
+     * @param {number} firestoreEmulatorPort - The port the emulator is running on.
+     */
+    connectEmulator(firestoreEmulatorPort: number): void;
+    private docRef;
+    private colRef;
+    /**
+     * Retrieves a single document from Firestore by its full path.
+     * @template T The expected type of the document data.
+     * @param {string} docPath The full path to the document (e.g., 'users/userId').
+     * @returns {Promise<T | null>} A promise resolving to the document data or null if not found.
+     */
+    getDocument<T>(docPath: string): Promise<T | null>;
+    /**
+     * Adds a new document to a specified collection.
+     * @template T The type of the data being added.
+     * @param {string} collectionPath The path to the collection (e.g., 'posts', 'users/userId/tasks').
+     * @param {T} data The data for the new document.
+     * @returns {Promise<string | undefined>} A promise resolving to the new document's ID, or undefined on failure.
+     */
+    addDocument<T>(collectionPath: string, data: T): Promise<string | undefined>;
+    /**
+     * Updates specific fields of an existing document.
+     * @param {string} docPath The full path to the document.
+     * @param {Record<string, any>} data An object containing the fields to update.
+     * @returns {Promise<void>}
+     */
+    updateDocument(docPath: string, data: Record<string, any>): Promise<void>;
+    /**
+     * Creates or overwrites a document completely.
+     * @template T The type of the data being set.
+     * @param {string} docPath The full path to the document.
+     * @param {T} data The data for the document.
+     * @param {object} [options] Optional settings. `merge: true` merges data instead of overwriting.
+     * @returns {Promise<void>}
+     */
+    setDocument<T>(docPath: string, data: T, options?: {
         merge?: boolean;
     }): Promise<void>;
-    static deleteDocument(docPath: string): Promise<void>;
-    static deleteCollection(collectionPath: string): Promise<void>;
-    static subscribeToDocument<T>(docPath: string, callback: (data: T | null) => void): () => void;
-    static subscribeToCollection<T>(collectionPath: string, callback: (data: T[]) => void): () => void;
-    static subscribeToCollection2<T extends FirestoreModel>(model: new (data: any) => T, // ✅ Accepts a class constructor
-    collectionPath: string, callback: (data: T[]) => void): () => void;
-    static fetchCollection<T>(path: string, ...queryConstraints: QueryConstraint[]): Promise<T[]>;
     /**
-     * Queries a Firestore collection with flexible options such as `where` filters, `orderBy` clauses, and `limit` constraints.
-     *
-     * @template T - The generic type representing the structure of the documents in the collection.
-     * @param {string} path - The Firestore collection path (e.g., "users", "jobs/applications").
-     * @param {QueryOptions} [options] - Optional query constraints:
-     *   - `where`: An array of conditions to filter documents. Each condition includes:
-     *       - `field`: The field to filter on (e.g., "status", "age").
-     *       - `op`: The comparison operator (e.g., "==", ">=", "<").
-     *       - `value`: The value to compare against.
-     *   - `orderBy`: An array of ordering criteria:
-     *       - `field`: The field to sort by.
-     *       - `direction`: Sort direction ("asc" for ascending or "desc" for descending, defaults to "asc").
-     *   - `limit`: Limits the number of returned documents.
-     *
-     * @returns {Promise<T[]>} A promise that resolves to an array of documents of type `T`.
-     *
-     * @example
-     * // 1️⃣ Basic Query Without Constraints
-     * const users = await FirestoreService.queryCollection<User>('users');
-     * console.log(users);
-     *
-     * @example
-     * // 2️⃣ Query with WHERE Condition
-     * const activeUsers = await FirestoreService.queryCollection<User>('users', {
-     *   where: [{ field: 'status', op: '==', value: 'active' }]
-     * });
-     * console.log(activeUsers);
-     *
-     * @example
-     * // 3️⃣ Query with ORDER BY and LIMIT
-     * const recentJobs = await FirestoreService.queryCollection<Job>('jobs', {
-     *   orderBy: [{ field: 'postedDate', direction: 'desc' }],
-     *   limit: 5
-     * });
-     * console.log(recentJobs);
-     *
-     * @example
-     * // 4️⃣ Combined WHERE, ORDER BY, and LIMIT Query
-     * const topActiveUsers = await FirestoreService.queryCollection<User>('users', {
-     *   where: [{ field: 'status', op: '==', value: 'active' }],
-     *   orderBy: [{ field: 'signupDate', direction: 'asc' }],
-     *   limit: 3
-     * });
-     * console.log(topActiveUsers);
+     * Deletes a document from Firestore.
+     * @param {string} docPath The full path to the document.
+     * @returns {Promise<void>}
      */
-    static queryCollection<T extends FirestoreModel>(_model: new (...args: any[]) => T, collectionPath: string, options?: QueryOptions): Promise<T[]>;
+    deleteDocument(docPath: string): Promise<void>;
+    /**
+     * Deletes all documents within a specified collection or subcollection.
+     * Use with caution, especially on large collections.
+     * @param {string} collectionPath The path to the collection (e.g., 'users', 'users/userId/posts').
+     * @returns {Promise<void>}
+     */
+    deleteCollection(collectionPath: string): Promise<void>;
+    /**
+     * Subscribes to real-time updates for a single document.
+     * @template T The expected type of the document data.
+     * @param {string} docPath The full path to the document.
+     * @param {(data: T | null) => void} callback The function to call with document data (or null) on updates.
+     * @returns {() => void} A function to unsubscribe from updates.
+     */
+    subscribeToDocument<T>(docPath: string, callback: (data: T | null) => void): () => void;
+    /**
+     * Subscribes to real-time updates for a collection.
+     * @template T The expected type of the documents in the collection.
+     * @param {string} collectionPath The path to the collection.
+     * @param {(data: T[]) => void} callback The function to call with an array of document data on updates.
+     * @returns {() => void} A function to unsubscribe from updates.
+     */
+    subscribeToCollection<T>(collectionPath: string, callback: (data: T[]) => void): () => void;
+    /**
+     * Subscribes to real-time updates for a collection, automatically instantiating FirestoreModel subclasses.
+     * @template T A type extending FirestoreModel.
+     * @param {new (...args: any[]) => T} model The constructor of the FirestoreModel subclass.
+     * @param {string} collectionPath The path to the collection.
+     * @param {(data: T[]) => void} callback The function to call with an array of instantiated models on updates.
+     * @returns {() => void} A function to unsubscribe from updates.
+     */
+    subscribeToCollection2<T extends FirestoreModel>(model: new (...args: any[]) => T, collectionPath: string, callback: (data: T[]) => void): () => void;
+    /**
+     * Fetches documents from a collection, optionally applying query constraints.
+     * @template T The expected type of the documents.
+     * @param {string} path The path to the collection.
+     * @param {...QueryConstraint} queryConstraints Optional Firestore query constraints (where, orderBy, limit, etc.).
+     * @returns {Promise<T[]>} A promise resolving to an array of document data.
+     */
+    fetchCollection<T>(path: string, ...queryConstraints: QueryConstraint[]): Promise<T[]>;
+    /**
+     * Queries a Firestore collection using a structured options object.
+     * @template T The expected type of the document data.
+     * @param {string} collectionPath The path to the collection.
+     * @param {QueryOptions} [options={}] Optional query constraints (where, orderBy, limit, startAfter, endBefore).
+     * @returns {Promise<T[]>} A promise resolving to an array of document data.
+     */
+    queryCollection<T>(collectionPath: string, options?: QueryOptions): Promise<T[]>;
+    /**
+     * Returns a new Firestore WriteBatch associated with this service instance's database.
+     * @returns {WriteBatch}
+     */
+    getBatch(): WriteBatch;
+    /**
+     * Updates specific fields of multiple documents in a batch.
+     * @param {WriteBatch} batch The Firestore WriteBatch to update.
+     * @param {string} docPath The full path to the document.
+     * @param {object} data An object containing the fields to update.
+     */
+    updateInBatch(batch: WriteBatch, docPath: string, data: {
+        [key: string]: FieldValue | Partial<unknown> | undefined;
+    }): void;
+    /**
+     * Sets a document in a batch.
+     * @template T The type of the data being set.
+     * @param {WriteBatch} batch The Firestore WriteBatch to set.
+     * @param {string} docPath The full path to the document.
+     * @param {T} data The data for the document.
+     * @param {SetOptions} [options] Optional settings. `merge: true` merges data instead of overwriting.
+     */
+    setInBatch<T>(batch: WriteBatch, docPath: string, data: T, options?: SetOptions): void;
+    /**
+     * Deletes a document in a batch.
+     * @param {WriteBatch} batch The Firestore WriteBatch to delete.
+     * @param {string} docPath The full path to the document.
+     */
+    deleteInBatch(batch: WriteBatch, docPath: string): void;
+    /**
+     * Provides access to Firestore FieldValue constants (e.g., arrayUnion, arrayRemove).
+     */
     static getFieldValue(): {
         arrayUnion: typeof arrayUnion;
         arrayRemove: typeof arrayRemove;
     };
+    /**
+     * Returns a Firestore Timestamp for the current time.
+     */
     static getTimestamp(): Timestamp;
+    /**
+     * Returns a special value used to delete a field during an update.
+     */
     static deleteField(): FieldValue;
-    /**
-     * Returns a new Firestore WriteBatch.
-     */
-    static getBatch(): WriteBatch;
-    /**
-     * Helper for batch.update()
-     */
-    static updateInBatch(batch: WriteBatch, docPath: string, data: {
-        [key: string]: FieldValue | Partial<unknown> | undefined;
-    }): void;
-    /**
-     * Helper for batch.set()
-     * Overload with optional merge
-     */
-    static setInBatch<T>(batch: WriteBatch, docPath: string, data: T, options?: SetOptions): void;
-    /**
-     * Helper for batch.delete()
-     */
-    static deleteInBatch(batch: WriteBatch, docPath: string): void;
-    static add(collectionPath: string, data: any): Promise<string | undefined>;
 }
-export default FirestoreService;
+export {};

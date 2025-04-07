@@ -1,8 +1,8 @@
 // BatchUsageExample.ts
 
 import { initializeApp } from "firebase/app";
-import FirestoreService from "../firestoreService";
-import { ExampleEntity } from "../examples/ExampleEntity";
+import { FirestoreService } from "../firestoreService";
+import { ExampleData, ExampleEntity } from "../examples/ExampleEntity";
 import { initializeFirestore, persistentLocalCache } from "firebase/firestore";
 import { persistentMultipleTabManager } from "firebase/firestore";
 
@@ -25,10 +25,10 @@ async function demoBatchWrites() {
   });
 
   // Initialize Firestore with the Firebase app
-  FirestoreService.initialize(db);
+  const firestoreService = new FirestoreService(db);
 
   // 2️⃣ Create two new ExampleEntity documents
-  const entityA = await ExampleEntity.create({
+  const entityA = await firestoreService.addDocument<ExampleData>("examples", {
     title: "Batch Doc A",
     description: "Created via batch demo",
     createdAt: new Date(),
@@ -36,7 +36,7 @@ async function demoBatchWrites() {
     owner: "user123",
   });
 
-  const entityB = await ExampleEntity.create({
+  const entityB = await firestoreService.addDocument<ExampleData>("examples", {
     title: "Batch Doc B",
     description: "Created via batch demo",
     createdAt: new Date(),
@@ -44,44 +44,48 @@ async function demoBatchWrites() {
     owner: "user123",
   });
 
-  console.log("Created entityA:", entityA.id);
-  console.log("Created entityB:", entityB.id);
+  if (!entityA || !entityB) {
+    console.error("Failed to create initial documents for batch demo.");
+    return;
+  }
+
+  console.log("Created entityA with ID:", entityA);
+  console.log("Created entityB with ID:", entityB);
+
+  // Build document paths using the IDs
+  const docPathA = ExampleEntity.buildPath(entityA);
+  const docPathB = ExampleEntity.buildPath(entityB);
 
   // 3️⃣ Start a Firestore batch
-  const batch = FirestoreService.getBatch();
+  const batch = firestoreService.getBatch();
 
-  // 4️⃣ Add operations to the batch
-  //    For example, let's update both docs
-  if (entityA.id) {
-    FirestoreService.updateInBatch(batch, entityA.getDocPath(), {
-      title: "Batch Updated A",
-      updatedAt: new Date(),
-    });
-  }
-  if (entityB.id) {
-    FirestoreService.updateInBatch(batch, entityB.getDocPath(), {
-      title: "Batch Updated B",
-      updatedAt: new Date(),
-    });
-  }
+  // 4️⃣ Add operations to the batch using the document paths
+  firestoreService.updateInBatch(batch, docPathA, {
+    title: "Batch Updated A",
+    updatedAt: new Date(),
+  });
+  firestoreService.updateInBatch(batch, docPathB, {
+    title: "Batch Updated B",
+    updatedAt: new Date(),
+  });
 
   // (If you wanted to set data from scratch, do:)
-  // FirestoreService.setInBatch(batch, entityA.getDocPath(), { ...newData }, { merge: true });
+  // firestoreService.setInBatch(batch, docPathA, { ...newData }, { merge: true });
 
   // (If you wanted to delete in batch, do:)
-  // FirestoreService.deleteInBatch(batch, entityB.getDocPath());
+  // firestoreService.deleteInBatch(batch, docPathB);
 
   // 5️⃣ Commit the batch
   await batch.commit();
   console.log("✅ Batch write completed, documents updated.");
 
-  // 6️⃣ Confirm the changes
+  // 6️⃣ Confirm the changes using the document paths
   //    Re-fetch from Firestore to verify
-  const updatedA = await ExampleEntity.get<ExampleEntity>(entityA.getDocPath());
-  const updatedB = await ExampleEntity.get<ExampleEntity>(entityB.getDocPath());
+  const updatedA = await firestoreService.getDocument<ExampleData>(docPathA);
+  const updatedB = await firestoreService.getDocument<ExampleData>(docPathB);
 
-  console.log("Updated entity A:", updatedA);
-  console.log("Updated entity B:", updatedB);
+  console.log("Updated entity A data:", updatedA);
+  console.log("Updated entity B data:", updatedB);
 }
 
 // Run the demo

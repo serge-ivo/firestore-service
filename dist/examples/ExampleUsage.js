@@ -1,11 +1,8 @@
 "use strict";
 // ExampleUsage.ts
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const app_1 = require("firebase/app");
-const firestoreService_1 = __importDefault(require("../firestoreService"));
+const firestoreService_1 = require("../firestoreService");
 const ExampleEntity_1 = require("./ExampleEntity");
 const firestore_1 = require("firebase/firestore");
 (async function runDemo() {
@@ -22,48 +19,55 @@ const firestore_1 = require("firebase/firestore");
             tabManager: (0, firestore_1.persistentMultipleTabManager)(),
         }),
     });
-    firestoreService_1.default.initialize(db);
+    const firestoreService = new firestoreService_1.FirestoreService(db);
     // 3️⃣ (Optional) Connect to Firestore emulator for local dev
     // FirestoreService.connectEmulator(8080);
-    // 4️⃣ Create a new ExampleEntity
-    const newEntity = await ExampleEntity_1.ExampleEntity.create({
+    // 4️⃣ Create a new document with ExampleData
+    const newEntityId = await firestoreService.addDocument("examples", {
         title: "Hello World",
         description: "A brand new entity",
         createdAt: new Date(),
         updatedAt: new Date(),
         owner: "user123",
     });
-    console.log("Created entity:", newEntity);
-    console.log("Assigned Firestore ID:", newEntity.id);
-    // 5️⃣ Fetch it by ID (two approaches)
-    const fetchedEntity = await ExampleEntity_1.ExampleEntity.getById(newEntity.id);
-    console.log("Fetched with getById:", fetchedEntity);
-    // or using the static `get` from FirestoreModel (if you prefer doc paths)
-    const docPath = ExampleEntity_1.ExampleEntity.buildPath(newEntity.id);
-    const fetchedViaModel = await ExampleEntity_1.ExampleEntity.get(docPath);
-    console.log("Fetched via FirestoreModel static get:", fetchedViaModel);
-    // 6️⃣ Update the entity (notice it already has an ID)
-    if (fetchedEntity) {
-        await fetchedEntity.update({
-            description: "Updated description with update()",
-            updatedAt: new Date(),
-        });
-        console.log("Updated entity:", fetchedEntity);
+    if (!newEntityId) {
+        console.error("Failed to create entity.");
+        return;
     }
-    // 7️⃣ (Optional) Demonstrate query or fetchCollection
-    // If you want to fetch a list of ExampleEntities (e.g., all documents in the "examples" collection),
-    // you'd typically do something like:
-    const allExamples = await firestoreService_1.default.fetchCollection("examples");
-    console.log("All example docs (raw data):", allExamples);
-    // Or if you have a method on ExampleEntity to fetch multiple,
-    // you might do something like:
-    // static async getAll(): Promise<ExampleEntity[]> {
-    //   const docs = await FirestoreService.fetchCollection<ExampleData>("examples");
-    //   return docs.map(d => new ExampleEntity(d));
-    // }
-    // 8️⃣ Delete if desired
-    // if (fetchedEntity) {
-    //   await fetchedEntity.delete();
-    //   console.log("Deleted entity:", fetchedEntity.id);
+    console.log("Created entity with ID:", newEntityId);
+    // 5️⃣ Fetch the document data using the service and its ID
+    const docPath = ExampleEntity_1.ExampleEntity.buildPath(newEntityId);
+    const fetchedData = await firestoreService.getDocument(docPath);
+    if (!fetchedData) {
+        console.error(`Failed to fetch document with ID: ${newEntityId}`);
+        return;
+    }
+    // Instantiate ExampleEntity using the fetched data and ID
+    const fetchedEntity = new ExampleEntity_1.ExampleEntity({ id: newEntityId, ...fetchedData });
+    console.log("Fetched and instantiated entity:", fetchedEntity);
+    // 6️⃣ Update the entity instance (use service for persistence)
+    if (fetchedEntity) {
+        // Update local instance data first
+        fetchedEntity.description = "Updated description via service";
+        fetchedEntity.updatedAt = new Date();
+        // Persist changes using the service
+        await firestoreService.updateDocument(fetchedEntity.getDocPath(), {
+            description: fetchedEntity.description,
+            updatedAt: fetchedEntity.updatedAt,
+        });
+        console.log("Updated entity and persisted changes:", fetchedEntity);
+    }
+    // 7️⃣ Demonstrate query or fetchCollection using the service instance
+    // Fetch a list of ExampleData documents
+    const allExamplesData = await firestoreService.fetchCollection("examples");
+    console.log("Fetched all example docs data:", allExamplesData);
+    // If you need ExampleEntity instances:
+    const allExampleEntities = allExamplesData.map((data) => new ExampleEntity_1.ExampleEntity({ id: data.id, ...data }) // Assuming data includes id from converter
+    );
+    console.log("Instantiated all ExampleEntities:", allExampleEntities);
+    // 8️⃣ Delete using the service
+    // if (fetchedEntity) { // Use docPath for deletion
+    //   await firestoreService.deleteDocument(docPath);
+    //   console.log("Deleted entity with ID:", newEntityId);
     // }
 })();

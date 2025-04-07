@@ -1,8 +1,8 @@
 // RealTimeExample.ts
 
 import { initializeApp } from "firebase/app";
-import FirestoreService from "../firestoreService";
-import { ExampleData, ExampleEntity } from "./ExampleEntity";
+import { FirestoreService } from "../firestoreService";
+import { ExampleData } from "./ExampleEntity";
 import {
   initializeFirestore,
   persistentLocalCache,
@@ -25,21 +25,32 @@ async function demoRealTime() {
       tabManager: persistentMultipleTabManager(),
     }),
   });
-  FirestoreService.initialize(db);
 
-  // 2️⃣ Create a sample document to watch
-  const newEntity = await ExampleEntity.create({
+  // Instantiate FirestoreService instead of calling a static initialize
+  const firestoreService = new FirestoreService(db);
+
+  // 2️⃣ Create data and add it using the service
+  const newExampleData: ExampleData = {
     title: "Realtime Demo",
     description: "Testing real-time subscription",
     createdAt: new Date(),
     updatedAt: new Date(),
     owner: "user123",
-  });
+  };
+  const newId = await firestoreService.addDocument<ExampleData>(
+    "examples",
+    newExampleData
+  );
 
-  // 3️⃣ Subscribe to the single document changes
-  const unsubscribeDoc = FirestoreService.subscribeToDocument<ExampleData>(
-    `examples/${newEntity.id}`,
-    (updatedData) => {
+  if (!newId) {
+    console.error("Failed to create document");
+    return; // Exit if creation failed
+  }
+
+  // 3️⃣ Subscribe to the single document changes using the new ID
+  const unsubscribeDoc = firestoreService.subscribeToDocument<ExampleData>(
+    `examples/${newId}`, // Use the returned ID
+    (updatedData: ExampleData | null) => {
       if (updatedData) {
         console.log("Document changed in real time:", updatedData);
       } else {
@@ -51,15 +62,15 @@ async function demoRealTime() {
   // 4️⃣ Subscribe to the entire "examples" collection
   //    (though, in a real app, you might limit or filter your queries)
   const unsubscribeCollection =
-    FirestoreService.subscribeToCollection<ExampleData>(
+    firestoreService.subscribeToCollection<ExampleData>(
       "examples",
-      (allDocs) => {
+      (allDocs: ExampleData[]) => {
         console.log("Collection changed in real time. Current docs:", allDocs);
       }
     );
 
   // 5️⃣ After some test updates, you can unsubscribe
-  //    E.g., in a real app, you’d do this when leaving a screen or ending the process:
+  //    E.g., in a real app, you'd do this when leaving a screen or ending the process:
   setTimeout(() => {
     console.log("Unsubscribing from real-time updates...");
     unsubscribeDoc();
