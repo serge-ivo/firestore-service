@@ -1,3 +1,36 @@
+/**
+ * FirestoreService - A wrapper around Firebase Firestore providing type-safe operations
+ *
+ * @example
+ * // 1️⃣ Basic Setup
+ * import { getFirestore } from 'firebase/firestore';
+ * import { FirestoreService } from '@serge-ivo/firestore-client';
+ *
+ * // Initialize Firebase app first
+ * const app = initializeApp(firebaseConfig);
+ * const db = getFirestore(app);
+ *
+ * // Initialize FirestoreService
+ * FirestoreService.initialize(db);
+ *
+ * @example
+ * // 2️⃣ Using the Service
+ * // After initialization, you can use any of the service methods
+ * const doc = await FirestoreService.getDocument<User>('users/user123');
+ *
+ * @example
+ * // 3️⃣ Common Error Cases
+ * // ❌ Don't use before initialization
+ * FirestoreService.getDocument('users/user123'); // Throws error
+ *
+ * // ❌ Don't initialize with invalid Firestore instance
+ * FirestoreService.initialize(null); // Throws error
+ *
+ * // ✅ Correct usage
+ * FirestoreService.initialize(db);
+ * const result = await FirestoreService.getDocument('users/user123');
+ */
+
 // src/services/FirestoreService.ts
 import {
   addDoc,
@@ -53,14 +86,59 @@ import { connectFirestoreEmulator } from "firebase/firestore";
 
 export class FirestoreService {
   private static db: Firestore;
+  private static isInitialized = false;
+
+  private static validateCollectionPath(path: string): void {
+    if (!path) {
+      throw new Error("Collection path cannot be empty");
+    }
+    if (path.startsWith("/") || path.endsWith("/")) {
+      throw new Error("Collection path cannot start or end with '/'");
+    }
+    const segments = path.split("/");
+    if (segments.length !== 1) {
+      throw new Error(
+        "Collection path must be a single segment (e.g., 'users')"
+      );
+    }
+  }
+
+  private static validateDocumentPath(path: string): void {
+    if (!path) {
+      throw new Error("Document path cannot be empty");
+    }
+    if (path.startsWith("/") || path.endsWith("/")) {
+      throw new Error("Document path cannot start or end with '/'");
+    }
+    const segments = path.split("/");
+    if (segments.length !== 2) {
+      throw new Error(
+        "Document path must have exactly two segments (e.g., 'users/123')"
+      );
+    }
+  }
 
   /**
    * Initialize Firestore using an existing Firebase app instance.
    * Note: You must initialize Firebase app yourself before calling this method.
-   * @param app - An initialized Firebase app instance
+   * @param db - An initialized Firestore instance
+   * @throws Error if db is not provided or invalid
    */
   static initialize(db: Firestore) {
+    if (!db) {
+      throw new Error("Firestore instance is required for initialization");
+    }
     this.db = db;
+    this.isInitialized = true;
+    console.log("FirestoreService initialized successfully");
+  }
+
+  private static checkInitialized() {
+    if (!this.isInitialized) {
+      throw new Error(
+        "FirestoreService has not been initialized. Call FirestoreService.initialize(db) first."
+      );
+    }
   }
 
   static connectEmulator(firestoreEmulatorPort: number) {
@@ -73,10 +151,14 @@ export class FirestoreService {
   }
 
   private static doc<T>(path: string): DocumentReference<T> {
+    this.checkInitialized();
+    this.validateDocumentPath(path);
     return doc(this.db, path).withConverter(FirestoreDataConverter<T>());
   }
 
   private static collection<T>(path: string): CollectionReference<T> {
+    this.checkInitialized();
+    this.validateCollectionPath(path);
     return collection(this.db, path).withConverter(FirestoreDataConverter<T>());
   }
 
@@ -91,12 +173,6 @@ export class FirestoreService {
     data: T
   ): Promise<string | undefined> {
     RequestLimiter.logGeneralRequest();
-    console.log(collectionPath);
-
-    console.log("collection:");
-    console.log(this.collection<T>(collectionPath).toString());
-    console.log("typeof collection:");
-    console.log(typeof this.collection<T>(collectionPath));
     const docRef = await addDoc(this.collection<T>(collectionPath), data);
     return docRef.id;
   }
