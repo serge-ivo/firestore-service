@@ -11,8 +11,15 @@ const userId = "test-user";
 
 describe("QueryableEntity", () => {
   beforeEach(async () => {
-    // Clean up existing test documents
-    await FirestoreService.deleteCollection(`users/${userId}/items`);
+    // Clean up existing test documents in the subcollection
+    const subcollectionPath = `users/${userId}/items`;
+    // Provide a type for the fetched documents, we only need the id
+    const docs = await FirestoreService.fetchCollection<{ id: string }>(
+      subcollectionPath
+    );
+    for (const doc of docs) {
+      await FirestoreService.deleteDocument(`${subcollectionPath}/${doc.id}`);
+    }
   });
 
   it("should find entities by status", async () => {

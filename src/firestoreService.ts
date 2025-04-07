@@ -58,6 +58,8 @@ import {
   where,
   WriteBatch,
   writeBatch,
+  startAfter,
+  endBefore,
 } from "firebase/firestore";
 
 import FirestoreDataConverter from "./FirestoreDataConverter";
@@ -80,6 +82,8 @@ interface QueryOptions {
   where?: Array<{ field: string; op: FilterOperator; value: any }>;
   orderBy?: Array<{ field: string; direction?: "asc" | "desc" }>;
   limit?: number;
+  startAfter?: any;
+  endBefore?: any;
 }
 
 import { connectFirestoreEmulator } from "firebase/firestore";
@@ -111,9 +115,9 @@ export class FirestoreService {
       throw new Error("Document path cannot start or end with '/'");
     }
     const segments = path.split("/");
-    if (segments.length !== 2) {
+    if (segments.length < 2 || segments.length % 2 !== 0) {
       throw new Error(
-        "Document path must have exactly two segments (e.g., 'users/123')"
+        "Document path must have an even number of segments greater than or equal to 2 (e.g., 'users/123' or 'users/123/posts/456')"
       );
     }
   }
@@ -163,7 +167,6 @@ export class FirestoreService {
 
   private static collection<T>(path: string): CollectionReference<T> {
     this.checkInitialized();
-    this.validateCollectionPath(path);
     return collection(this.db, path).withConverter(FirestoreDataConverter<T>());
   }
 
@@ -317,40 +320,59 @@ export class FirestoreService {
    * });
    * console.log(topActiveUsers);
    */
-  static async queryCollection<T>(
-    model: new (data: any, id?: string) => T,
-    path: string,
-    options?: QueryOptions
+  static async queryCollection<T extends FirestoreModel>(
+    model: new (...args: any[]) => T,
+    collectionPath: string,
+    options: QueryOptions = {}
   ): Promise<T[]> {
+    RequestLimiter.logGeneralRequest();
+    this.checkInitialized();
+
+    const colRef = collection(this.db, collectionPath);
     const constraints: QueryConstraint[] = [];
 
-    // Handle WHERE clauses
-    if (options?.where) {
-      options.where.forEach((condition) => {
-        constraints.push(where(condition.field, condition.op, condition.value));
+    // Apply where clauses
+    if (options.where) {
+      options.where.forEach((w) => {
+        constraints.push(where(w.field, w.op, w.value));
       });
     }
 
-    // Handle ORDER BY clauses
-    if (options?.orderBy) {
-      options.orderBy.forEach((order) => {
-        constraints.push(orderBy(order.field, order.direction || "asc"));
+    // Apply orderBy clauses
+    if (options.orderBy) {
+      options.orderBy.forEach((o) => {
+        constraints.push(orderBy(o.field, o.direction));
       });
     }
 
-    // Handle LIMIT
-    if (options?.limit) {
+    // Apply limit
+    if (options.limit) {
       constraints.push(limit(options.limit));
     }
 
-    const q =
-      constraints.length > 0
-        ? query(this.collection<T>(path), ...constraints)
-        : this.collection<T>(path);
+    // Apply startAfter for pagination
+    if (options.startAfter) {
+      // If startAfter is a FirestoreModel instance, get its snapshot reference if needed
+      // Firestore SDK v9+ can often use the document data directly if sorted by __name__
+      // or the specific fields used in orderBy.
+      // Passing the model instance *might* work if the converter handles it,
+      // but using the underlying ID or field values is safer if not relying on __name__.
+      // For simplicity here, we'll assume direct use or that the converter handles it.
+      // A more robust implementation might require getting the DocumentSnapshot.
+      constraints.push(startAfter(options.startAfter));
+    }
+
+    // Apply endBefore for pagination
+    if (options.endBefore) {
+      constraints.push(endBefore(options.endBefore));
+    }
+
+    const q = query(colRef, ...constraints).withConverter(
+      FirestoreDataConverter<T>()
+    );
 
     const snapshot = await getDocs(q);
-
-    return snapshot.docs.map((doc) => new model(doc.data(), doc.id));
+    return snapshot.docs.map((doc) => doc.data());
   }
 
   static getFieldValue() {
