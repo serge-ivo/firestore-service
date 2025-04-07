@@ -92,34 +92,42 @@ export class FirestoreService {
   private static db: Firestore;
   private static isInitialized = false;
 
-  private static validateCollectionPath(path: string): void {
+  private static validatePathBasic(path: string): void {
     if (!path) {
-      throw new Error("Collection path cannot be empty");
+      throw new Error("Path cannot be empty");
     }
     if (path.startsWith("/") || path.endsWith("/")) {
-      throw new Error("Collection path cannot start or end with '/'");
+      throw new Error("Path cannot start or end with '/'");
     }
+  }
+
+  private static validateCollectionPathSegments(path: string): void {
+    this.validatePathBasic(path);
     const segments = path.split("/");
-    if (segments.length !== 1) {
+    if (segments.length % 2 !== 1) {
       throw new Error(
-        "Collection path must be a single segment (e.g., 'users')"
+        "Collection path must have an odd number of segments (e.g., 'users' or 'users/123/posts')"
       );
     }
   }
 
-  private static validateDocumentPath(path: string): void {
-    if (!path) {
-      throw new Error("Document path cannot be empty");
-    }
-    if (path.startsWith("/") || path.endsWith("/")) {
-      throw new Error("Document path cannot start or end with '/'");
-    }
+  private static validateDocumentPathSegments(path: string): void {
+    this.validatePathBasic(path);
     const segments = path.split("/");
-    if (segments.length < 2 || segments.length % 2 !== 0) {
+    if (segments.length % 2 !== 0) {
       throw new Error(
-        "Document path must have an even number of segments greater than or equal to 2 (e.g., 'users/123' or 'users/123/posts/456')"
+        "Document path must have an even number of segments (e.g., 'users/123' or 'users/123/posts/456')"
       );
     }
+    if (segments.length < 2) {
+      // Ensure at least collection/doc
+      throw new Error("Document path must have at least two segments.");
+    }
+  }
+
+  // Update existing validateDocumentPath to use the new segment validator
+  private static validateDocumentPath(path: string): void {
+    this.validateDocumentPathSegments(path);
   }
 
   /**
@@ -180,6 +188,10 @@ export class FirestoreService {
     collectionPath: string,
     data: T
   ): Promise<string | undefined> {
+    // Perform validation *first* before any other operations
+    this.checkInitialized(); // Check initialization first is also good practice
+    this.validateCollectionPathSegments(collectionPath);
+
     RequestLimiter.logGeneralRequest();
     const docRef = await addDoc(this.collection<T>(collectionPath), data);
     return docRef.id;
