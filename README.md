@@ -65,6 +65,13 @@ interface FirestoreData {
   updatedAt?: Timestamp;
 }
 
+// Service Types
+interface FirestoreServiceConfig {
+  maxBatchSize?: number;
+  maxQueryLimit?: number;
+  enablePersistence?: boolean;
+}
+
 // Utility Types
 type WithId<T> = T & { id: string };
 type WithOptionalId<T> = T & { id?: string };
@@ -73,203 +80,188 @@ type DeepPartial<T> = {
 };
 ```
 
-### Type Usage Examples
+## API Reference
+
+### Core Methods
+
+#### Initialization
 
 ```typescript
-// Using WithId type
-interface User {
-  name: string;
-  email: string;
+// Initialize Firestore service
+static initialize(db: Firestore): void
+
+// Connect to Firestore emulator
+static connectEmulator(firestoreEmulatorPort: number): void
+```
+
+#### Document Operations
+
+```typescript
+// Get a single document
+static async getDocument<T>(docPath: string): Promise<T | null>
+
+// Add a new document
+static async addDocument<T>(collectionPath: string, data: T): Promise<string | undefined>
+
+// Update a document
+static async updateDocument(docPath: string, data: Record<string, any>): Promise<void>
+
+// Set a document (create or update)
+static async setDocument<T>(docPath: string, data: T, options: { merge?: boolean } = { merge: true }): Promise<void>
+
+// Delete a document
+static async deleteDocument(docPath: string): Promise<void>
+
+// Delete an entire collection
+static async deleteCollection(collectionPath: string): Promise<void>
+```
+
+#### Collection Operations
+
+```typescript
+// Fetch collection with query constraints
+static async fetchCollection<T>(path: string, ...queryConstraints: QueryConstraint[]): Promise<T[]>
+
+// Query collection with options
+static async queryCollection<T>(
+  model: new (data: any, id?: string) => T,
+  path: string,
+  options?: QueryOptions
+): Promise<T[]>
+```
+
+#### Real-time Subscriptions
+
+```typescript
+// Subscribe to document changes
+static subscribeToDocument<T>(
+  docPath: string,
+  callback: (data: T | null) => void
+): () => void
+
+// Subscribe to collection changes
+static subscribeToCollection<T>(
+  collectionPath: string,
+  callback: (data: T[]) => void
+): () => void
+
+// Subscribe to collection with model instantiation
+static subscribeToCollection2<T extends FirestoreModel>(
+  model: new (data: any) => T,
+  collectionPath: string,
+  callback: (data: T[]) => void
+): () => void
+```
+
+#### Batch Operations
+
+```typescript
+// Get a new batch
+static getBatch(): WriteBatch
+
+// Update document in batch
+static updateInBatch(
+  batch: WriteBatch,
+  docPath: string,
+  data: { [key: string]: FieldValue | Partial<unknown> | undefined }
+): void
+
+// Set document in batch
+static setInBatch<T>(
+  batch: WriteBatch,
+  docPath: string,
+  data: T,
+  options: SetOptions = {}
+): void
+
+// Delete document in batch
+static deleteInBatch(batch: WriteBatch, docPath: string): void
+```
+
+#### Field Value Operations
+
+```typescript
+// Get field value operations
+static getFieldValue(): {
+  arrayUnion: (...elements: any[]) => FieldValue;
+  arrayRemove: (...elements: any[]) => FieldValue;
+  increment: (n: number) => FieldValue;
+  serverTimestamp: () => FieldValue;
 }
 
-const user: WithId<User> = {
-  id: "123",
-  name: "John",
-  email: "john@example.com",
-};
+// Get timestamp
+static getTimestamp(): Timestamp
 
-// Using DeepPartial for updates
-const updateData: DeepPartial<User> = {
-  name: "John Updated",
-};
-
-// Using QueryOptions
-const queryOpts: QueryOptions = {
-  where: [{ field: "status", op: "==", value: "active" }],
-  orderBy: [{ field: "createdAt", direction: "desc" }],
-  limit: 10,
-};
+// Get delete field operation
+static deleteField(): FieldValue
 ```
 
-## Development
+## Usage Examples
 
-### Type Management
-
-The library includes several npm scripts for type management:
-
-```bash
-# Check types without emitting files
-npm run type:check
-
-# Generate only type definition files
-npm run type:build
-
-# Watch mode for type generation (useful during development)
-npm run type:watch
-
-# Build everything (including types)
-npm run build
-```
-
-### Updating Types
-
-1. **Add New Types**:
-
-   - Edit `src/types/index.ts`
-   - Add your new type definitions
-   - Export them from the types file
-
-2. **Modify Existing Types**:
-
-   - Locate the type in `src/types/index.ts`
-   - Make your changes
-   - Run `npm run type:check` to verify changes
-
-3. **Publish Type Updates**:
-
-   ```bash
-   # Update version
-   npm version patch  # or minor/major
-
-   # Build and publish
-   npm publish
-   ```
-
-### Type Categories
-
-Types are organized into categories in `src/types/index.ts`:
-
-- **Query Types**: For query operations and filters
-- **Model Types**: Base types for Firestore documents
-- **Service Types**: Configuration and service-related types
-- **Field Value Types**: Types for Firestore field operations
-- **Subscription Types**: Types for real-time subscriptions
-- **Error Types**: Custom error types
-- **Utility Types**: Helper types for common operations
-
-## Features
-
-### Core Features
-
-- Automatic rate limiting and usage control
-- Configurable document read/write limits
-- Query result size restrictions
-- Protection against costly recursive operations
-- Batch operation size controls
-
-### Developer Experience
-
-- Simplified Firestore operations
-- Full TypeScript support with comprehensive type definitions
-- Works with both Firebase Admin SDK and Firebase Client SDK
-- Built-in Firebase emulator support for testing
-
-### Security & Monitoring
-
-- Usage tracking and monitoring
-- Automatic request throttling
-- Customizable error handling for limit violations
-
-## Usage
-
-### Initialization
+### Basic Document Operations
 
 ```typescript
+// Initialize
 import { initializeApp } from "firebase/app";
-import {
-  initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-} from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 import { FirestoreService } from "@serge-ivo/firestore-client";
 
-// Initialize Firebase app with your config
 const app = initializeApp({
   projectId: "your-project",
   apiKey: "your-api-key",
   authDomain: "your-project.firebaseapp.com",
-  // ... other Firebase config options
 });
 
-// Initialize Firestore with persistent caching enabled
 const firestore = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager(),
   }),
 });
 
-// Initialize Firestore service with your Firebase app
 FirestoreService.initialize(firestore);
-```
 
-This initialization code includes:
-
-1. The necessary imports for the caching functionality
-2. Initialization of Firestore with persistent local cache
-3. Support for multiple tab management
-4. Proper initialization of the FirestoreService with the configured Firestore instance
-
-The persistent cache configuration will help improve your application's performance by:
-
-- Enabling offline data persistence
-- Allowing data sharing between multiple tabs
-- Reducing unnecessary network requests
-- Providing a better user experience with faster data access
-
-### Basic Operations
-
-```typescript
 // Create a document
 const docId = await FirestoreService.addDocument("users", {
   name: "John Doe",
-  role: "user",
+  email: "john@example.com",
 });
 
 // Read a document
 const user = await FirestoreService.getDocument("users/123");
 
-// Update or create document with merge
-await FirestoreService.setDocument(
-  "users/123",
-  {
-    lastLogin: new Date(),
-  },
-  { merge: true }
-);
-
-// Update specific fields
+// Update a document
 await FirestoreService.updateDocument("users/123", {
   lastLogin: new Date(),
 });
 
 // Delete a document
 await FirestoreService.deleteDocument("users/123");
-
-// Delete an entire collection
-await FirestoreService.deleteCollection("users");
 ```
 
-### Working with Collections
+### Collection Queries
 
 ```typescript
-// Get collection reference with type safety
-const usersCollection = FirestoreService.collection<UserType>("users");
+// Query with filters
+const activeUsers = await FirestoreService.queryCollection(User, "users", {
+  where: [{ field: "status", op: "==", value: "active" }],
+  orderBy: [{ field: "createdAt", direction: "desc" }],
+  limit: 10,
+});
 
-// Get document reference with type safety
-const userDoc = FirestoreService.doc<UserType>("users/123");
+// Fetch with constraints
+const recentPosts = await FirestoreService.fetchCollection<Post>(
+  "posts",
+  where("published", "==", true),
+  orderBy("createdAt", "desc"),
+  limit(5)
+);
+```
 
-// Subscribe to document changes
-const unsubscribe = FirestoreService.subscribeToDocument<UserType>(
+### Real-time Subscriptions
+
+```typescript
+// Subscribe to document
+const unsubscribeDoc = FirestoreService.subscribeToDocument<User>(
   "users/123",
   (user) => {
     if (user) {
@@ -278,139 +270,69 @@ const unsubscribe = FirestoreService.subscribeToDocument<UserType>(
   }
 );
 
-// Subscribe to collection changes
-const unsubscribeCollection = FirestoreService.subscribeToCollection<UserType>(
+// Subscribe to collection
+const unsubscribeCollection = FirestoreService.subscribeToCollection2(
+  User,
   "users",
   (users) => {
     console.log("Users updated:", users);
   }
 );
 
-// Don't forget to unsubscribe when done
-unsubscribe();
+// Clean up subscriptions
+unsubscribeDoc();
 unsubscribeCollection();
 ```
 
-### Authentication
+### Batch Operations
 
 ```typescript
-import { initializeApp } from "firebase/app";
-import { AuthService } from "@serge-ivo/firestore-client";
-
-// Initialize Firebase app first
-const app = initializeApp({
-  // Your Firebase config
-});
-
-// Initialize AuthService with your Firebase app
-AuthService.initialize(app);
-
-// Sign in with Google
-const user = await AuthService.signInWithGoogle();
-
-// Sign in with email/password
-const user = await AuthService.signInWithEmailPassword(
-  "user@example.com",
-  "password"
-);
-
-// Listen to auth state changes
-const unsubscribe = AuthService.onAuthStateChanged((user) => {
-  if (user) {
-    console.log("User is signed in:", user);
-  } else {
-    console.log("User is signed out");
-  }
-});
-
-// Sign out
-await AuthService.signOut();
-```
-
-### Advanced Features
-
-#### Batch Operations
-
-```typescript
-// Start a batch
+// Create a batch
 const batch = FirestoreService.getBatch();
 
-// Add operations to the batch
+// Add operations to batch
 FirestoreService.updateInBatch(batch, "users/123", {
-  title: "Updated Title",
-  updatedAt: new Date(),
+  lastLogin: new Date(),
 });
 
-FirestoreService.setInBatch(batch, "users/456", newData, { merge: true });
+FirestoreService.setInBatch(batch, "users/456", {
+  name: "New User",
+  email: "new@example.com",
+});
+
 FirestoreService.deleteInBatch(batch, "users/789");
 
 // Commit the batch
 await batch.commit();
 ```
 
-#### Field Value Operations
+### Field Value Operations
 
 ```typescript
-// Array operations
-const { arrayUnion, arrayRemove } = FirestoreService.getFieldValue();
+const { arrayUnion, arrayRemove, increment, serverTimestamp } =
+  FirestoreService.getFieldValue();
 
-// Add tags to an array
+// Update array fields
 await FirestoreService.updateDocument("users/123", {
-  tags: arrayUnion("firebase", "tutorial"),
-});
-
-// Remove tags from an array
-await FirestoreService.updateDocument("users/123", {
-  tags: arrayRemove("firebase"),
-});
-
-// Delete a field
-await FirestoreService.updateDocument("users/123", {
-  description: FirestoreService.deleteField(),
+  tags: arrayUnion("new-tag"),
+  favorites: arrayRemove("old-favorite"),
+  points: increment(10),
+  lastUpdated: serverTimestamp(),
 });
 ```
 
-#### Real-time Updates
-
-```typescript
-// Subscribe to a single document
-const unsubscribeDoc = FirestoreService.subscribeToDocument<UserType>(
-  "users/123",
-  (updatedData) => {
-    if (updatedData) {
-      console.log("Document changed:", updatedData);
-    } else {
-      console.log("Document was deleted");
-    }
-  }
-);
-
-// Subscribe to a collection
-const unsubscribeCollection = FirestoreService.subscribeToCollection<UserType>(
-  "users",
-  (allDocs) => {
-    console.log("Collection changed. Current docs:", allDocs);
-  }
-);
-
-// Don't forget to unsubscribe when done
-unsubscribeDoc();
-unsubscribeCollection();
-```
-
-### Best Practices
+## Best Practices
 
 1. **Use Type Safety**
 
    ```typescript
-   interface UserType {
+   interface User {
      name: string;
-     role: string;
+     email: string;
      lastLogin?: Date;
    }
 
-   // All operations will now be type-safe
-   const user = await FirestoreService.getDocument<UserType>("users/123");
+   const user = await FirestoreService.getDocument<User>("users/123");
    ```
 
 2. **Handle Rate Limits**
@@ -419,8 +341,7 @@ unsubscribeCollection();
    try {
      await FirestoreService.addDocument("users", userData);
    } catch (error) {
-     // RequestLimiter will throw if limits are exceeded
-     console.error("Request limit exceeded, try again later");
+     console.error("Request limit exceeded:", error);
    }
    ```
 
@@ -428,7 +349,6 @@ unsubscribeCollection();
 
    ```typescript
    if (process.env.NODE_ENV === "development") {
-     // Connect to Firestore emulator
      FirestoreService.connectEmulator(9098);
    }
    ```
@@ -449,10 +369,11 @@ unsubscribeCollection();
    }
    ```
 
-5. **Batch Operations for Better Performance**
+5. **Use Batch Operations for Better Performance**
    ```typescript
-   // Delete all documents in a collection
-   await FirestoreService.deleteCollection("users");
+   const batch = FirestoreService.getBatch();
+   // Add multiple operations
+   await batch.commit();
    ```
 
 ## Testing
