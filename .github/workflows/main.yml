@@ -3,9 +3,9 @@ name: Publish to NPM
 on:
   push:
     branches:
-      - main  # Runs on push to main
+      - main # Runs on push to main
   release:
-    types: [published]  # Runs on GitHub release
+    types: [published] # Runs on GitHub release
 
 permissions:
   contents: read
@@ -25,19 +25,19 @@ jobs:
           node-version: 18
           cache: "npm"
           registry-url: "https://registry.npmjs.org/"
-          scope: "@your-npm-username"  # Change this if using an NPM scope
+          scope: "@serge-ivo"
 
       - name: Install dependencies
         run: npm install
 
       - name: Install Firebase CLI
-        run: npm install -g firebase-tools  # ✅ Install Firebase CLI
+        run: npm install -g firebase-tools # ✅ Install Firebase CLI
 
       - name: Run tests
         run: |
           export NODE_ENV=test
           npx firebase emulators:exec --only firestore,auth --project firestore-service-test "jest --detectOpenHandles --runInBand"
-        continue-on-error: false  # Stop if tests fail
+        continue-on-error: false # Stop if tests fail
 
       - name: Build package
         run: npm run build
