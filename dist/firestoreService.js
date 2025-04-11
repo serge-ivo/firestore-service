@@ -36,6 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FirestoreService = void 0;
 // src/services/FirestoreService.ts
+const app_1 = require("firebase/app");
 const firestore_1 = require("firebase/firestore");
 // Correctly import the local factory function
 const FirestoreDataConverter_1 = __importDefault(require("./FirestoreDataConverter"));
@@ -43,18 +44,27 @@ const RequestLimiter_1 = __importDefault(require("./RequestLimiter"));
 class FirestoreService {
     /**
      * Creates an instance of FirestoreService.
-     * @param {Firestore} db - An initialized Firestore database instance.
-     * @throws Error if db is not provided or invalid.
+     * @param {FirebaseOptions} firebaseConfig - The Firebase configuration object.
+     * @throws Error if firebaseConfig is not provided or invalid.
      */
-    constructor(db) {
-        if (!db ||
-            typeof db !== "object" ||
-            !("type" in db) ||
-            db.type !== "firestore") {
-            throw new Error("Valid Firestore instance is required for FirestoreService constructor");
+    constructor(firebaseConfig) {
+        // Basic check for firebaseConfig object
+        if (!firebaseConfig ||
+            typeof firebaseConfig !== "object" ||
+            !firebaseConfig.apiKey // Check for a key property like apiKey as a basic validation
+        ) {
+            throw new Error("Valid Firebase configuration object is required for FirestoreService constructor");
         }
-        this.db = db;
-        console.log("FirestoreService instance created successfully.");
+        // Initialize Firebase app and Firestore instance
+        try {
+            const app = (0, app_1.initializeApp)(firebaseConfig);
+            this.db = (0, firestore_1.getFirestore)(app);
+            console.log("FirestoreService instance created and Firebase initialized successfully.");
+        }
+        catch (error) {
+            console.error("Error initializing Firebase:", error);
+            throw new Error("Failed to initialize Firebase within FirestoreService");
+        }
     }
     // --- Path Validation Methods (can remain private static or become private instance methods) ---
     // Let's make them instance methods for consistency, though static is also fine.

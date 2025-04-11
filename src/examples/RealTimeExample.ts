@@ -1,36 +1,31 @@
 // RealTimeExample.ts
 
-import { initializeApp } from "firebase/app";
 import { FirestoreService } from "../firestoreService";
 import { ExampleData } from "./ExampleEntity";
-import {
-  initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-} from "firebase/firestore";
+
 /**
  * Demonstrates how to use subscribeToDocument and subscribeToCollection
  * for real-time updates.
  */
-async function demoRealTime() {
-  // 1️⃣ Initialize Firebase app and Firestore
-  const app = initializeApp({
-    apiKey: "fake-api-key",
+async function demoRealTimeUpdates() {
+  // 1️⃣ Define Firebase Config
+  const firebaseConfig = {
+    apiKey: "fake-api-key", // Replace with actual config
     projectId: "your-app",
-  });
+  };
 
-  // Initialize Firestore with the Firebase app
-  const db = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager(),
-    }),
-  });
+  // 2️⃣ Initialize FirestoreService
+  const firestoreService = new FirestoreService(firebaseConfig);
 
-  // Instantiate FirestoreService instead of calling a static initialize
-  const firestoreService = new FirestoreService(db);
+  // Optional: Connect to emulator
+  // try {
+  //   firestoreService.connectEmulator(8080);
+  // } catch (error) {
+  //   console.warn("Emulator connection failed:", error);
+  // }
 
-  // 2️⃣ Create data and add it using the service
-  const newExampleData: ExampleData = {
+  // 3️⃣ Prepare a document for demonstration
+  const initialData: ExampleData = {
     title: "Realtime Demo",
     description: "Testing real-time subscription",
     createdAt: new Date(),
@@ -39,7 +34,7 @@ async function demoRealTime() {
   };
   const newId = await firestoreService.addDocument<ExampleData>(
     "examples",
-    newExampleData
+    initialData
   );
 
   if (!newId) {
@@ -47,7 +42,7 @@ async function demoRealTime() {
     return; // Exit if creation failed
   }
 
-  // 3️⃣ Subscribe to the single document changes using the new ID
+  // 4️⃣ Subscribe to the single document changes using the new ID
   const unsubscribeDoc = firestoreService.subscribeToDocument<ExampleData>(
     `examples/${newId}`, // Use the returned ID
     (updatedData: ExampleData | null) => {
@@ -59,7 +54,7 @@ async function demoRealTime() {
     }
   );
 
-  // 4️⃣ Subscribe to the entire "examples" collection
+  // 5️⃣ Subscribe to the entire "examples" collection
   //    (though, in a real app, you might limit or filter your queries)
   const unsubscribeCollection =
     firestoreService.subscribeToCollection<ExampleData>(
@@ -69,7 +64,7 @@ async function demoRealTime() {
       }
     );
 
-  // 5️⃣ After some test updates, you can unsubscribe
+  // 6️⃣ After some test updates, you can unsubscribe
   //    E.g., in a real app, you'd do this when leaving a screen or ending the process:
   setTimeout(() => {
     console.log("Unsubscribing from real-time updates...");
@@ -79,4 +74,4 @@ async function demoRealTime() {
 }
 
 // Just call the function to run the demo
-demoRealTime().catch(console.error);
+demoRealTimeUpdates().catch(console.error);

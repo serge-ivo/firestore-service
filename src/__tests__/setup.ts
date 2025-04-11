@@ -8,42 +8,41 @@ import {
 import { FirestoreService } from "../firestoreService";
 
 // Global Firebase app instance
-let app: any = null;
-let firestore: Firestore; // Use Firestore type
+let app: any = null; // This might become unnecessary if FirestoreService manages the app internally
+let firestore: Firestore; // Still needed for raw emulator connection if service doesn't expose it
 
 // Export a service instance for tests to use
 export let firestoreService: FirestoreService;
 
+// Define the config used for tests
+const testFirebaseConfig = {
+  projectId: "test-project", // Use a consistent test project ID
+  apiKey: "test-api-key", // Use fake credentials for emulator
+  authDomain: "test-project.firebaseapp.com",
+};
+
 // Initialize Firebase and create the FirestoreService instance once
 beforeAll(async () => {
   try {
-    // Delete any existing apps to ensure clean state
+    // Cleanup any previous apps (good practice)
     const apps = getApps();
-    for (const existingApp of apps) {
-      await deleteApp(existingApp);
+    if (apps.length > 0) {
+      await Promise.all(apps.map(deleteApp));
+      console.log("Cleaned up previous Firebase apps.");
     }
 
-    // Initialize new app
-    app = initializeApp({
-      projectId: "test-project", // Use a consistent test project ID
-      apiKey: "test-api-key",
-      authDomain: "test-project.firebaseapp.com",
-    });
+    // Create the service instance using the config
+    // FirestoreService constructor now handles initializeApp and getFirestore
+    firestoreService = new FirestoreService(testFirebaseConfig);
 
-    firestore = getFirestore(app);
-    connectFirestoreEmulator(firestore, "localhost", 9098);
+    // Connect the service instance to the emulator
+    firestoreService.connectEmulator(9098); // Use the instance method
 
-    // Create the service instance
-    firestoreService = new FirestoreService(firestore);
-    // Optionally connect the instance to the emulator if needed/supported
-    // firestoreService.connectEmulator(9098);
-
-    console.log("✅ Firebase and FirestoreService initialized for tests.");
-  } catch (error) {
-    console.error(
-      "🚨 Failed to initialize Firebase/FirestoreService for tests:",
-      error
+    console.log(
+      "✅ FirestoreService initialized and connected to emulator for tests."
     );
+  } catch (error) {
+    console.error("🚨 Failed to initialize FirestoreService for tests:", error);
     throw error;
   }
 });
@@ -51,8 +50,12 @@ beforeAll(async () => {
 // Cleanup after all tests
 afterAll(async () => {
   try {
-    if (app) {
-      await deleteApp(app);
+    // No need to explicitly delete the app if FirestoreService handles it,
+    // but keep it if direct app management is needed elsewhere.
+    // If FirestoreService doesn't expose a way to disconnect/cleanup, this might be needed.
+    const appInstance = getApps().length > 0 ? getApp() : null;
+    if (appInstance) {
+      await deleteApp(appInstance);
       console.log("Firebase app deleted successfully.");
     }
   } catch (error) {

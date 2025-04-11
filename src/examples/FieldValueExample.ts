@@ -1,41 +1,32 @@
 // FieldValueExample.ts
 
-import { initializeApp } from "firebase/app";
+import { arrayRemove, arrayUnion, deleteField } from "firebase/firestore";
 import { FirestoreService } from "../firestoreService";
 import { ExampleData } from "./ExampleEntity";
-import {
-  initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-  arrayUnion,
-  arrayRemove,
-  deleteField,
-} from "firebase/firestore";
 /**
  * Demonstrates FirestoreService instance usage with FieldValue operations:
  * - arrayUnion / arrayRemove
  * - deleteField
  */
 async function demoFieldValueOps() {
-  // Initialize Firebase app
-  const app = initializeApp({
-    apiKey: "fake-api-key",
+  // 1️⃣ Define Firebase Config
+  const firebaseConfig = {
+    apiKey: "fake-api-key", // Replace with actual config
     projectId: "your-app",
-  });
+  };
 
-  // Initialize Firestore with the Firebase app
-  const db = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager(),
-    }),
-  });
+  // 2️⃣ Initialize FirestoreService
+  const firestoreService = new FirestoreService(firebaseConfig);
 
-  // Instantiate the service
-  const firestoreService = new FirestoreService(db);
+  // Optional: Connect to emulator
+  // try {
+  //   firestoreService.connectEmulator(8080);
+  // } catch (error) {
+  //   console.warn("Emulator connection failed:", error);
+  // }
 
-  // 1️⃣ Create data and add it using the service
-  //    Assuming ExampleData has a 'tags' field (e.g., tags?: string[])
-  const newExampleData: ExampleData = {
+  // 3️⃣ Create a document to work with
+  const initialData: ExampleData & { tags?: string[]; comments?: string[] } = {
     title: "Field Values Demo",
     description: "Testing arrayUnion/arrayRemove",
     createdAt: new Date(),
@@ -46,7 +37,7 @@ async function demoFieldValueOps() {
 
   const newId = await firestoreService.addDocument<ExampleData>(
     "examples", // Assuming collection name is 'examples'
-    newExampleData
+    initialData
   );
 
   if (!newId) {
@@ -56,19 +47,19 @@ async function demoFieldValueOps() {
 
   const docPath = `examples/${newId}`; // Define doc path
 
-  // 2️⃣ Use updateDocument with arrayUnion (using instance and imported helper)
+  // 4️⃣ Use updateDocument with arrayUnion (using instance and imported helper)
   await firestoreService.updateDocument(docPath, {
     tags: arrayUnion("firebase", "tutorial"), // Use imported arrayUnion
   });
   console.log("Added tags via arrayUnion.");
 
-  // 3️⃣ Remove a tag with arrayRemove (using instance and imported helper)
+  // 5️⃣ Remove a tag with arrayRemove (using instance and imported helper)
   await firestoreService.updateDocument(docPath, {
     tags: arrayRemove("firebase"), // Use imported arrayRemove
   });
   console.log("Removed 'firebase' tag via arrayRemove.");
 
-  // 4️⃣ Delete a field entirely with deleteField (using instance and imported helper)
+  // 6️⃣ Delete a field entirely with deleteField (using instance and imported helper)
   await firestoreService.updateDocument(docPath, {
     description: deleteField(), // Use imported deleteField
   });

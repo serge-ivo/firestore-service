@@ -1,10 +1,7 @@
 // BatchUsageExample.ts
 
-import { initializeApp } from "firebase/app";
-import { FirestoreService } from "../firestoreService";
 import { ExampleData, ExampleEntity } from "../examples/ExampleEntity";
-import { initializeFirestore, persistentLocalCache } from "firebase/firestore";
-import { persistentMultipleTabManager } from "firebase/firestore";
+import { FirestoreService } from "../firestoreService";
 
 /**
  * Demonstrates how to use FirestoreService.getBatch() alongside
@@ -12,20 +9,23 @@ import { persistentMultipleTabManager } from "firebase/firestore";
  * to perform multiple writes in a single atomic batch.
  */
 async function demoBatchWrites() {
-  // 1️⃣ Initialize Firebase app and Firestore
-  const app = initializeApp({
-    apiKey: "fake-api-key",
-    projectId: "your-app",
-  });
+  // 1️⃣ Define Firebase config
+  const firebaseConfig = {
+    apiKey: "fake-api-key", // Replace with your actual config if running against real Firebase
+    projectId: "your-app", // Replace with your actual project ID
+  };
 
-  const db = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager(),
-    }),
-  });
+  // Initialize FirestoreService with the Firebase config
+  // FirestoreService now handles app initialization and Firestore instance creation internally
+  const firestoreService = new FirestoreService(firebaseConfig);
 
-  // Initialize Firestore with the Firebase app
-  const firestoreService = new FirestoreService(db);
+  // Optionally, connect to emulator if needed (ensure emulator is running)
+  // try {
+  //   firestoreService.connectEmulator(8080); // Default Firestore emulator port
+  //   console.log("Connected to Firestore Emulator for batch demo.");
+  // } catch (error) {
+  //   console.warn("Could not connect to Firestore Emulator:", error);
+  // }
 
   // 2️⃣ Create two new ExampleEntity documents
   const entityA = await firestoreService.addDocument<ExampleData>("examples", {

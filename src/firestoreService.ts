@@ -31,6 +31,7 @@
  */
 
 // src/services/FirestoreService.ts
+import { initializeApp, FirebaseOptions } from "firebase/app";
 import {
   addDoc,
   arrayRemove,
@@ -60,6 +61,7 @@ import {
   where,
   WriteBatch,
   writeBatch,
+  getFirestore,
 } from "firebase/firestore";
 
 // Correctly import the local factory function
@@ -93,22 +95,32 @@ export class FirestoreService {
 
   /**
    * Creates an instance of FirestoreService.
-   * @param {Firestore} db - An initialized Firestore database instance.
-   * @throws Error if db is not provided or invalid.
+   * @param {FirebaseOptions} firebaseConfig - The Firebase configuration object.
+   * @throws Error if firebaseConfig is not provided or invalid.
    */
-  constructor(db: Firestore) {
+  constructor(firebaseConfig: FirebaseOptions) {
+    // Basic check for firebaseConfig object
     if (
-      !db ||
-      typeof db !== "object" ||
-      !("type" in db) ||
-      db.type !== "firestore"
+      !firebaseConfig ||
+      typeof firebaseConfig !== "object" ||
+      !firebaseConfig.apiKey // Check for a key property like apiKey as a basic validation
     ) {
       throw new Error(
-        "Valid Firestore instance is required for FirestoreService constructor"
+        "Valid Firebase configuration object is required for FirestoreService constructor"
       );
     }
-    this.db = db;
-    console.log("FirestoreService instance created successfully.");
+
+    // Initialize Firebase app and Firestore instance
+    try {
+      const app = initializeApp(firebaseConfig);
+      this.db = getFirestore(app);
+      console.log(
+        "FirestoreService instance created and Firebase initialized successfully."
+      );
+    } catch (error) {
+      console.error("Error initializing Firebase:", error);
+      throw new Error("Failed to initialize Firebase within FirestoreService");
+    }
   }
 
   // --- Path Validation Methods (can remain private static or become private instance methods) ---

@@ -29,7 +29,8 @@
  * const firestoreService = new FirestoreService(db);
  * const result = await firestoreService.getDocument('users/user123');
  */
-import { arrayRemove, arrayUnion, FieldValue, Firestore, QueryConstraint, SetOptions, Timestamp, WriteBatch } from "firebase/firestore";
+import { FirebaseOptions } from "firebase/app";
+import { arrayRemove, arrayUnion, FieldValue, QueryConstraint, SetOptions, Timestamp, WriteBatch } from "firebase/firestore";
 import { FirestoreModel } from "./firestoreModel";
 export type FilterOperator = "==" | "!=" | "<" | "<=" | ">" | ">=" | "array-contains" | "in" | "array-contains-any" | "not-in";
 interface QueryOptions {
@@ -50,10 +51,10 @@ export declare class FirestoreService {
     private readonly db;
     /**
      * Creates an instance of FirestoreService.
-     * @param {Firestore} db - An initialized Firestore database instance.
-     * @throws Error if db is not provided or invalid.
+     * @param {FirebaseOptions} firebaseConfig - The Firebase configuration object.
+     * @throws Error if firebaseConfig is not provided or invalid.
      */
-    constructor(db: Firestore);
+    constructor(firebaseConfig: FirebaseOptions);
     private validatePathBasic;
     private validateCollectionPathSegments;
     private validateDocumentPathSegments;

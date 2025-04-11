@@ -1,29 +1,29 @@
 "use strict";
 // BatchUsageExample.ts
 Object.defineProperty(exports, "__esModule", { value: true });
-const app_1 = require("firebase/app");
-const firestoreService_1 = require("../firestoreService");
 const ExampleEntity_1 = require("../examples/ExampleEntity");
-const firestore_1 = require("firebase/firestore");
-const firestore_2 = require("firebase/firestore");
+const firestoreService_1 = require("../firestoreService");
 /**
  * Demonstrates how to use FirestoreService.getBatch() alongside
  * FirestoreService.updateDocumentInBatch/setDocumentInBatch/deleteDocumentInBatch
  * to perform multiple writes in a single atomic batch.
  */
 async function demoBatchWrites() {
-    // 1️⃣ Initialize Firebase app and Firestore
-    const app = (0, app_1.initializeApp)({
-        apiKey: "fake-api-key",
-        projectId: "your-app",
-    });
-    const db = (0, firestore_1.initializeFirestore)(app, {
-        localCache: (0, firestore_1.persistentLocalCache)({
-            tabManager: (0, firestore_2.persistentMultipleTabManager)(),
-        }),
-    });
-    // Initialize Firestore with the Firebase app
-    const firestoreService = new firestoreService_1.FirestoreService(db);
+    // 1️⃣ Define Firebase config
+    const firebaseConfig = {
+        apiKey: "fake-api-key", // Replace with your actual config if running against real Firebase
+        projectId: "your-app", // Replace with your actual project ID
+    };
+    // Initialize FirestoreService with the Firebase config
+    // FirestoreService now handles app initialization and Firestore instance creation internally
+    const firestoreService = new firestoreService_1.FirestoreService(firebaseConfig);
+    // Optionally, connect to emulator if needed (ensure emulator is running)
+    // try {
+    //   firestoreService.connectEmulator(8080); // Default Firestore emulator port
+    //   console.log("Connected to Firestore Emulator for batch demo.");
+    // } catch (error) {
+    //   console.warn("Could not connect to Firestore Emulator:", error);
+    // }
     // 2️⃣ Create two new ExampleEntity documents
     const entityA = await firestoreService.addDocument("examples", {
         title: "Batch Doc A",

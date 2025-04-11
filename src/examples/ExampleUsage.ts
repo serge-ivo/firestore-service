@@ -1,34 +1,26 @@
 // ExampleUsage.ts
 
-import { initializeApp } from "firebase/app";
 import { FirestoreService } from "../firestoreService";
-import { ExampleEntity, ExampleData } from "./ExampleEntity";
-import {
-  initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-} from "firebase/firestore";
-(async function runDemo() {
-  // 1️⃣ Initialize Firebase app (only once in your app's lifecycle)
-  const app = initializeApp({
-    apiKey: "fake-api-key", // Replace with real config in production
-    authDomain: "your-app.firebaseapp.com",
-    projectId: "your-app",
-    // etc.
-  });
+import { ExampleData, ExampleEntity } from "./ExampleEntity";
 
-  // 2️⃣ Initialize Firestore using the Firebase app
-  const db = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager(),
-    }),
-  });
-  const firestoreService = new FirestoreService(db);
+async function demoUsage() {
+  // 1️⃣ Define Firebase Config
+  const firebaseConfig = {
+    apiKey: "your-api-key", // Replace with your actual config
+    projectId: "your-project-id", // Replace with your actual project ID
+  };
 
-  // 3️⃣ (Optional) Connect to Firestore emulator for local dev
-  // FirestoreService.connectEmulator(8080);
+  // 2️⃣ Initialize FirestoreService with the config
+  const firestoreService = new FirestoreService(firebaseConfig);
 
-  // 4️⃣ Create a new document with ExampleData
+  // Optional: Connect to emulator if running one
+  // try {
+  //   firestoreService.connectEmulator(8080);
+  // } catch (error) {
+  //   console.warn("Could not connect to Firestore Emulator:", error);
+  // }
+
+  // 3️⃣ Create a new document
   const newEntityId = await firestoreService.addDocument<ExampleData>(
     "examples",
     {
@@ -47,7 +39,7 @@ import {
 
   console.log("Created entity with ID:", newEntityId);
 
-  // 5️⃣ Fetch the document data using the service and its ID
+  // 4️⃣ Fetch the document data using the service and its ID
   const docPath = ExampleEntity.buildPath(newEntityId);
   const fetchedData = await firestoreService.getDocument<ExampleData>(docPath);
 
@@ -60,7 +52,7 @@ import {
   const fetchedEntity = new ExampleEntity({ id: newEntityId, ...fetchedData });
   console.log("Fetched and instantiated entity:", fetchedEntity);
 
-  // 6️⃣ Update the entity instance (use service for persistence)
+  // 5️⃣ Update the entity instance (use service for persistence)
   if (fetchedEntity) {
     // Update local instance data first
     fetchedEntity.description = "Updated description via service";
@@ -74,7 +66,7 @@ import {
     console.log("Updated entity and persisted changes:", fetchedEntity);
   }
 
-  // 7️⃣ Demonstrate query or fetchCollection using the service instance
+  // 6️⃣ Demonstrate query or fetchCollection using the service instance
   // Fetch a list of ExampleData documents
   const allExamplesData = await firestoreService.fetchCollection<ExampleData>(
     "examples"
@@ -87,9 +79,12 @@ import {
   );
   console.log("Instantiated all ExampleEntities:", allExampleEntities);
 
-  // 8️⃣ Delete using the service
+  // 7️⃣ Delete using the service
   // if (fetchedEntity) { // Use docPath for deletion
   //   await firestoreService.deleteDocument(docPath);
   //   console.log("Deleted entity with ID:", newEntityId);
   // }
-})();
+}
+
+// Call the demo function
+demoUsage().catch(console.error);

@@ -1,6 +1,6 @@
 {
   "name": "@serge-ivo/firestore-client",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "A Firestore data management module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -39,7 +39,7 @@
   ],
   "author": "Serge Ivo",
   "license": "MIT",
-  "peerDependencies": {
+  "dependencies": {
     "firebase": "^11.6.0"
   },
   "devDependencies": {
