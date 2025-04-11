@@ -2,10 +2,9 @@ name: Publish to NPM
 
 on:
   push:
-    branches:
-      - main # Runs on push to main
+    branches: [main]
   release:
-    types: [published] # Runs on GitHub release
+    types: [published]
 
 permissions:
   contents: read
@@ -24,25 +23,27 @@ jobs:
         with:
           node-version: 18
           cache: "npm"
-          registry-url: "https://registry.npmjs.org/"
-          scope: "@serge-ivo"
 
       - name: Install dependencies
         run: npm install
 
       - name: Install Firebase CLI
-        run: npm install -g firebase-tools # ✅ Install Firebase CLI
+        run: npm install -g firebase-tools
 
       - name: Run tests
         run: |
           export NODE_ENV=test
           npx firebase emulators:exec --only firestore,auth --project firestore-service-test "jest --detectOpenHandles --runInBand"
-        continue-on-error: false # Stop if tests fail
 
       - name: Build package
         run: npm run build
 
+      - name: Configure npm for scoped publishing
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          echo "@serge-ivo:registry=https://registry.npmjs.org/" >> ~/.npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Publish to NPM
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
