@@ -90,4 +90,10 @@ build/
 # /dist
 !dist/ # This allows tracking dist/ in this repo
 
+# Compiled output
+/dist
+
+# Dependencies
+/node_modules
+
 
