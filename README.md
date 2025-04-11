@@ -35,7 +35,8 @@ yarn add @serge-ivo/firestore-client firebase
       // ...etc
     };
 
-    export const db: Firestore = getFirestore(app);
+    // Export the configuration object for use elsewhere
+    export { firebaseConfig };
     ```
 
 2.  **Create a `FirestoreService` instance using the configuration:**
