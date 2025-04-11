@@ -1,6 +1,6 @@
 {
   "name": "@serge-ivo/firestore-client",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "A Firestore data management module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
