@@ -2,7 +2,7 @@
 
 A TypeScript/JavaScript library that provides controlled and cost-effective Firestore data management. This library helps prevent abuse and excessive costs in your Firebase applications by implementing configurable rate limiting and usage controls.
 
-**Note:** This library requires instantiation. You must create an instance of `FirestoreService` by passing it a configured Firestore `db` object.
+**Note:** This library requires instantiation. You must create an instance of `FirestoreService` by passing it a configured Firebase configuration object (`FirebaseOptions`).
 
 ## Why Use This Library?
 
@@ -21,14 +21,13 @@ yarn add @serge-ivo/firestore-client firebase
 
 ## Basic Setup & Usage
 
-1.  **Initialize Firebase and get the `db` object:**
+1.  **Get your Firebase Configuration:**
 
     ```typescript
-    // Example: src/firebase.ts
-    import { initializeApp } from "firebase/app";
-    import { getFirestore, Firestore } from "firebase/firestore";
+    // Example: src/firebaseConfig.ts
+    import { FirebaseOptions } from "firebase/app";
 
-    const firebaseConfig = {
+    const firebaseConfig: FirebaseOptions = {
       // Your Firebase config details here
       apiKey: "...",
       authDomain: "...",
@@ -36,21 +35,20 @@ yarn add @serge-ivo/firestore-client firebase
       // ...etc
     };
 
-    const app = initializeApp(firebaseConfig);
     export const db: Firestore = getFirestore(app);
     ```
 
-2.  **Create a `FirestoreService` instance:**
+2.  **Create a `FirestoreService` instance using the configuration:**
 
     It's recommended to create a single instance (singleton) and export it for use throughout your application.
 
     ```typescript
-    // Example: src/firestore.ts or integrate into src/firebase.ts
-    import { db } from "./firebase"; // Import the db instance
+    // Example: src/firestore.ts
+    import { firebaseConfig } from "./firebaseConfig"; // Import your config
     import { FirestoreService } from "@serge-ivo/firestore-client";
 
     // Create and export the service instance
-    export const firestoreService = new FirestoreService(db);
+    export const firestoreService = new FirestoreService(firebaseConfig);
     ```
 
 3.  **Use the instance in your application:**
@@ -79,7 +77,8 @@ yarn add @serge-ivo/firestore-client firebase
             const userData = await firestoreService.getDocument<UserData>(
               `users/${userId}` // Construct path manually or use a model/helper
             );
-            setUser(userData); // The fetched data (with ID added by converter) is stored
+            // The fetched data (with ID added by the converter) is stored
+            setUser(userData);
           } catch (error) {
             console.error("Failed to fetch user:", error);
           }
@@ -109,7 +108,7 @@ All methods (except utility methods like `getTimestamp`) are now **instance meth
 
 ```typescript
 // Create a new service instance
-constructor(db: Firestore)
+constructor(firebaseConfig: FirebaseOptions)
 ```
 
 ### Document Operations
@@ -149,14 +148,15 @@ _Note: `QueryOptions` allows `where`, `orderBy`, `limit`, `startAfter`, `endBefo
 ### Real-time Subscriptions
 
 ```typescript
+// Note: All subscription methods return an unsubscribe function.
 // Subscribe to document changes
 subscribeToDocument<T>(docPath: string, callback: (data: T | null) => void): () => void
 
-// Subscribe to collection changes (raw data)
-subscribeToCollection<T>(collectionPath: string, callback: (data: T[]) => void): () => void
+// Subscribe to collection changes (uses data converter)
+subscribeToCollection<T>(collectionPath: string, callback: (data: T[]) => void, options?: QueryOptions): () => void
 
 // Subscribe to collection with FirestoreModel subclass instantiation
-subscribeToCollection2<T extends FirestoreModel>(model: new (...args: any[]) => T, collectionPath: string, callback: (data: T[]) => void): () => void
+subscribeToCollection2<T extends FirestoreModel>(model: new (...args: any[]) => T, collectionPath: string, callback: (data: T[]) => void, options?: QueryOptions): () => void
 ```
 
 ### Batch Operations
@@ -224,6 +224,7 @@ export class ExampleEntity extends FirestoreModel {
 
   // Constructor accepts the data object (including optional id from converter)
   constructor(data: { id?: string } & Partial<ExampleData>) {
+    // ID is added by the data converter
     super(data); // Passes data up to base class (which assigns properties)
   }
 
@@ -266,9 +267,7 @@ async function workWithExamples() {
   // 2. Fetch data using the service
   const fetchedData = await firestoreService.getDocument<
     ExampleData & { id: string }
-  >(
-    ExampleEntity.buildPath(newId) // Use static path builder for document
-  );
+  >(ExampleEntity.buildPath(newId)); // Use static path builder for document
 
   if (fetchedData) {
     // 3. Optionally instantiate the model if needed for path logic or other methods
@@ -329,6 +328,8 @@ interface QueryOptions {
   where?: WhereClause[];
   orderBy?: OrderByClause[];
   limit?: number;
+  startAfter?: any; // Document snapshot or field values for pagination
+  endBefore?: any; // Document snapshot or field values for pagination
 }
 
 // Model Types
@@ -371,7 +372,7 @@ type DeepPartial<T> = {
 
    ```typescript
    try {
-     await FirestoreService.addDocument("users", userData);
+     await firestoreService.addDocument("users", userData);
    } catch (error) {
      console.error("Request limit exceeded:", error);
    }
@@ -381,7 +382,7 @@ type DeepPartial<T> = {
 
    ```typescript
    if (process.env.NODE_ENV === "development") {
-     FirestoreService.connectEmulator(9098);
+     firestoreService.connectEmulator(9098);
    }
    ```
 
@@ -391,11 +392,17 @@ type DeepPartial<T> = {
    class MyComponent {
      private unsubscribe?: () => void;
 
-     onMount() {
-       this.unsubscribe = FirestoreService.subscribeToDocument(...);
+     componentDidMount() {
+       this.unsubscribe = firestoreService.subscribeToDocument<MyDataType>(
+         "myCollection/doc123",
+         (data) => {
+           console.log("Received data:", data);
+           // Update component state
+         }
+       );
      }
 
-     onUnmount() {
+     componentWillUnmount() {
        this.unsubscribe?.();
      }
    }
@@ -403,7 +410,7 @@ type DeepPartial<T> = {
 
 5. **Use Batch Operations for Better Performance**
    ```typescript
-   const batch = FirestoreService.getBatch();
+   const batch = firestoreService.getBatch();
    // Add multiple operations
    await batch.commit();
    ```
@@ -412,11 +419,19 @@ type DeepPartial<T> = {
 
 This library uses Jest for testing. Tests are run against the Firebase Emulator Suite.
 
-1. Start the Firebase emulators:
+**Setup:**
 
-   ```bash
-   npm run start:emulators
-   ```
+1.  **Install Firebase CLI:** If you haven't already, install the Firebase CLI: `npm install -g firebase-tools`
+2.  **Login:** Login to Firebase: `firebase login`
+3.  **Install Emulator Suite:** If needed, setup the emulators: `firebase init emulators` (select Firestore)
+
+**Running Tests:**
+
+1.  Start the Firebase emulators:
+
+```bash
+npm run start:emulators
+```
 
 2. In a separate terminal, run the tests:
    ```bash
