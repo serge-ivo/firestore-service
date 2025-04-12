@@ -32,6 +32,7 @@
 import { FirebaseOptions } from "firebase/app";
 import { arrayRemove, arrayUnion, FieldValue, QueryConstraint, SetOptions, Timestamp, WriteBatch } from "firebase/firestore";
 import { FirestoreModel } from "./firestoreModel";
+import { AuthService } from "./AuthService";
 export type FilterOperator = "==" | "!=" | "<" | "<=" | ">" | ">=" | "array-contains" | "in" | "array-contains-any" | "not-in";
 interface QueryOptions {
     where?: Array<{
@@ -49,6 +50,7 @@ interface QueryOptions {
 }
 export declare class FirestoreService {
     private readonly db;
+    readonly auth: AuthService;
     /**
      * Creates an instance of FirestoreService.
      * @param {FirebaseOptions} firebaseConfig - The Firebase configuration object.

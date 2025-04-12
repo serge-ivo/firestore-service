@@ -31,7 +31,7 @@
  */
 
 // src/services/FirestoreService.ts
-import { initializeApp, FirebaseOptions, FirebaseApp } from "firebase/app";
+import { initializeApp, FirebaseOptions } from "firebase/app";
 import {
   addDoc,
   arrayRemove,
@@ -93,7 +93,7 @@ interface QueryOptions {
 export class FirestoreService {
   // Store db as a private readonly instance variable
   private readonly db: Firestore;
-  private readonly app: FirebaseApp; // Store the FirebaseApp instance
+  // private readonly app: FirebaseApp; // Store the FirebaseApp instance - Removed as it's unused within the class
   public readonly auth: AuthService; // Expose AuthService instance
 
   /**
@@ -116,7 +116,7 @@ export class FirestoreService {
     // Initialize Firebase app and Firestore instance
     try {
       const app = initializeApp(firebaseConfig);
-      this.app = app; // Store the app instance
+      // this.app = app; // Store the app instance - Removed as it's unused within the class
       this.db = getFirestore(app);
       this.auth = new AuthService(app); // Initialize AuthService
       console.log(

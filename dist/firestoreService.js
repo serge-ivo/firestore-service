@@ -41,6 +41,7 @@ const firestore_1 = require("firebase/firestore");
 // Correctly import the local factory function
 const FirestoreDataConverter_1 = __importDefault(require("./FirestoreDataConverter"));
 const RequestLimiter_1 = __importDefault(require("./RequestLimiter"));
+const AuthService_1 = require("./AuthService"); // Import AuthService
 class FirestoreService {
     /**
      * Creates an instance of FirestoreService.
@@ -58,8 +59,10 @@ class FirestoreService {
         // Initialize Firebase app and Firestore instance
         try {
             const app = (0, app_1.initializeApp)(firebaseConfig);
+            // this.app = app; // Store the app instance - Removed as it's unused within the class
             this.db = (0, firestore_1.getFirestore)(app);
-            console.log("FirestoreService instance created and Firebase initialized successfully.");
+            this.auth = new AuthService_1.AuthService(app); // Initialize AuthService
+            console.log("FirestoreService and AuthService instances created and Firebase initialized successfully.");
         }
         catch (error) {
             console.error("Error initializing Firebase:", error);
