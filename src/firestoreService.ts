@@ -31,7 +31,7 @@
  */
 
 // src/services/FirestoreService.ts
-import { initializeApp, FirebaseOptions } from "firebase/app";
+import { initializeApp, FirebaseOptions, FirebaseApp } from "firebase/app";
 import {
   addDoc,
   arrayRemove,
@@ -68,6 +68,7 @@ import {
 import createFirestoreDataConverter from "./FirestoreDataConverter";
 import { FirestoreModel } from "./firestoreModel";
 import RequestLimiter from "./RequestLimiter";
+import { AuthService } from "./AuthService"; // Import AuthService
 
 export type FilterOperator =
   | "=="
@@ -92,6 +93,8 @@ interface QueryOptions {
 export class FirestoreService {
   // Store db as a private readonly instance variable
   private readonly db: Firestore;
+  private readonly app: FirebaseApp; // Store the FirebaseApp instance
+  public readonly auth: AuthService; // Expose AuthService instance
 
   /**
    * Creates an instance of FirestoreService.
@@ -113,9 +116,11 @@ export class FirestoreService {
     // Initialize Firebase app and Firestore instance
     try {
       const app = initializeApp(firebaseConfig);
+      this.app = app; // Store the app instance
       this.db = getFirestore(app);
+      this.auth = new AuthService(app); // Initialize AuthService
       console.log(
-        "FirestoreService instance created and Firebase initialized successfully."
+        "FirestoreService and AuthService instances created and Firebase initialized successfully."
       );
     } catch (error) {
       console.error("Error initializing Firebase:", error);

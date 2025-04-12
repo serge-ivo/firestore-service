@@ -191,6 +191,79 @@ static getTimestamp(): Timestamp
 static deleteField(): FieldValue
 ```
 
+## Authentication (AuthService)
+
+The `FirestoreService` instance also provides access to authentication methods via its `auth` property, which holds an instance of `AuthService`.
+
+**Accessing Auth Methods:**
+
+```typescript
+import { firestoreService } from "./path/to/your/firestore/instance";
+
+// Access auth methods via the 'auth' property
+const authService = firestoreService.auth;
+```
+
+**Available Methods on `firestoreService.auth`:**
+
+- `getCurrentUser(): User | null`: Gets the currently signed-in Firebase User object, or null.
+- `getCurrentUserId(): string | null`: Gets the ID of the currently signed-in user, or null.
+- `signInWithEmailPassword(email, password): Promise<UserCredential>`: Signs in using email and password.
+- `signInWithGoogle(): Promise<UserCredential>`: Initiates sign-in with Google via a popup.
+- `signOut(): Promise<void>`: Signs out the current user.
+- `onAuthStateChanged(callback: (user: User | null) => void): Unsubscribe`: Listens for changes in authentication state. Returns an unsubscribe function.
+
+**Example Usage:**
+
+```typescript
+import { firestoreService } from "./firestore"; // Adjust path as needed
+
+async function checkAuthAndSignIn() {
+  let userId = firestoreService.auth.getCurrentUserId();
+  console.log("Initial User ID:", userId);
+
+  if (!userId) {
+    try {
+      console.log("Attempting Google Sign-In...");
+      const userCredential = await firestoreService.auth.signInWithGoogle();
+      console.log("Signed in with Google:", userCredential.user?.displayName);
+      userId = userCredential.user?.uid;
+      console.log("User ID after sign-in:", userId);
+    } catch (error) {
+      console.error("Google Sign-In failed:", error);
+      return; // Exit if sign-in fails
+    }
+  }
+
+  // Set up a listener for auth state changes
+  console.log("Setting up auth state listener...");
+  const unsubscribe = firestoreService.auth.onAuthStateChanged((user) => {
+    if (user) {
+      console.log("Auth state changed: User is signed in -", user.uid);
+    } else {
+      console.log("Auth state changed: User is signed out");
+    }
+  });
+
+  // Example: Sign out after a delay (replace with your app logic)
+  setTimeout(async () => {
+    try {
+      console.log("Signing out...");
+      await firestoreService.auth.signOut();
+      console.log("User signed out successfully.");
+    } catch (error) {
+      console.error("Sign out failed:", error);
+    }
+
+    // Clean up the listener when no longer needed
+    console.log("Unsubscribing auth listener...");
+    unsubscribe();
+  }, 5000); // Sign out after 5 seconds for demo
+}
+
+checkAuthAndSignIn();
+```
+
 ## FirestoreModel Base Class (Simplified)
 
 The library includes a base class `FirestoreModel` (`src/firestoreModel.ts`) that can be extended. In the current design, its primary purpose is:
